@@ -233,6 +233,229 @@ export async function listServices() {
   }
 }
 
+// === FILE SYSTEM ===
+export async function listDirectory(user: string, path: string = "/") {
+  const data = await hestiaCommand("v-list-fs-directory", user, path, "json");
+  if (typeof data !== "object" || data === null) return [];
+  // Returns object with filenames as keys
+  return Object.entries(data).map(([name, info]: [string, any]) => ({
+    name,
+    ...info,
+  }));
+}
+
+export async function readFile(user: string, path: string) {
+  return hestiaCommand("v-open-fs-file", user, path);
+}
+
+export async function createDirectory(user: string, path: string) {
+  return hestiaCommand("v-add-fs-directory", user, path);
+}
+
+export async function deleteFile(user: string, path: string) {
+  return hestiaCommand("v-delete-fs-file", user, path);
+}
+
+export async function deleteDirectory(user: string, path: string) {
+  return hestiaCommand("v-delete-fs-directory", user, path);
+}
+
+// === DATABASES ===
+export async function listDatabases(user: string) {
+  const data = await hestiaCommand("v-list-databases", user, "json");
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return [];
+  return Object.entries(data).map(([name, info]: [string, any]) => ({
+    name,
+    user,
+    ...info,
+  }));
+}
+
+export async function listAllDatabases() {
+  const users = await listUsers();
+  const allDbs: any[] = [];
+  for (const user of users) {
+    try {
+      const dbs = await listDatabases(user.username);
+      allDbs.push(...dbs);
+    } catch {
+      // User might have no databases
+    }
+  }
+  return allDbs;
+}
+
+export async function addDatabase(user: string, dbName: string, dbUser: string, dbPassword: string, type: string = "mysql") {
+  return hestiaCommand("v-add-database", user, dbName, dbUser, dbPassword, type);
+}
+
+export async function deleteDatabase(user: string, dbName: string) {
+  return hestiaCommand("v-delete-database", user, dbName);
+}
+
+// === MAIL ===
+export async function listMailDomains(user: string) {
+  const data = await hestiaCommand("v-list-mail-domains", user, "json");
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return [];
+  return Object.entries(data).map(([domain, info]: [string, any]) => ({
+    domain,
+    user,
+    ...info,
+  }));
+}
+
+export async function listAllMailDomains() {
+  const users = await listUsers();
+  const all: any[] = [];
+  for (const user of users) {
+    try {
+      const domains = await listMailDomains(user.username);
+      all.push(...domains);
+    } catch {}
+  }
+  return all;
+}
+
+export async function listMailAccounts(user: string, domain: string) {
+  const data = await hestiaCommand("v-list-mail-accounts", user, domain, "json");
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return [];
+  return Object.entries(data).map(([account, info]: [string, any]) => ({
+    account,
+    domain,
+    user,
+    ...info,
+  }));
+}
+
+export async function addMailDomain(user: string, domain: string) {
+  return hestiaCommand("v-add-mail-domain", user, domain);
+}
+
+export async function deleteMailDomain(user: string, domain: string) {
+  return hestiaCommand("v-delete-mail-domain", user, domain);
+}
+
+export async function addMailAccount(user: string, domain: string, account: string, password: string) {
+  return hestiaCommand("v-add-mail-account", user, domain, account, password);
+}
+
+export async function deleteMailAccount(user: string, domain: string, account: string) {
+  return hestiaCommand("v-delete-mail-account", user, domain, account);
+}
+
+// === DNS ===
+export async function listDnsDomains(user: string) {
+  const data = await hestiaCommand("v-list-dns-domains", user, "json");
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return [];
+  return Object.entries(data).map(([domain, info]: [string, any]) => ({
+    domain,
+    user,
+    ...info,
+  }));
+}
+
+export async function listAllDnsDomains() {
+  const users = await listUsers();
+  const all: any[] = [];
+  for (const user of users) {
+    try {
+      const domains = await listDnsDomains(user.username);
+      all.push(...domains);
+    } catch {}
+  }
+  return all;
+}
+
+export async function listDnsRecords(user: string, domain: string) {
+  const data = await hestiaCommand("v-list-dns-records", user, domain, "json");
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return [];
+  return Object.entries(data).map(([id, info]: [string, any]) => ({
+    id,
+    domain,
+    user,
+    ...info,
+  }));
+}
+
+export async function addDnsRecord(user: string, domain: string, recordId: string, type: string, value: string, priority?: string) {
+  const args = [user, domain, recordId, type, value];
+  if (priority) args.push(priority);
+  return hestiaCommand("v-add-dns-record", ...args);
+}
+
+export async function deleteDnsRecord(user: string, domain: string, recordId: string) {
+  return hestiaCommand("v-delete-dns-record", user, domain, recordId);
+}
+
+// === SSL ===
+export async function listSslCertificates() {
+  // Get all domains with SSL info
+  const users = await listUsers();
+  const certs: any[] = [];
+  for (const user of users) {
+    try {
+      const domains = await listDomains(user.username);
+      for (const domain of domains) {
+        certs.push({
+          domain: domain.domain,
+          user: user.username,
+          ssl: domain.SSL || "no",
+          sslHome: domain.SSL_HOME || "",
+          letsencrypt: domain.LETSENCRYPT || "no",
+          sslExpiry: domain.SSL_EXPIRE || "",
+          sslIssuer: domain.SSL_ISSUER || "",
+        });
+      }
+    } catch {}
+  }
+  return certs;
+}
+
+export async function addLetsEncryptDomain(user: string, domain: string, aliases?: string) {
+  const args = [user, domain];
+  if (aliases) args.push(aliases);
+  return hestiaCommand("v-add-letsencrypt-domain", ...args);
+}
+
+export async function deleteLetsEncryptDomain(user: string, domain: string) {
+  return hestiaCommand("v-delete-letsencrypt-domain", user, domain);
+}
+
+// === BACKUPS ===
+export async function listBackups(user: string) {
+  const data = await hestiaCommand("v-list-user-backups", user, "json");
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return [];
+  return Object.entries(data).map(([filename, info]: [string, any]) => ({
+    filename,
+    user,
+    ...info,
+  }));
+}
+
+export async function listAllBackups() {
+  const users = await listUsers();
+  const all: any[] = [];
+  for (const user of users) {
+    try {
+      const backups = await listBackups(user.username);
+      all.push(...backups);
+    } catch {}
+  }
+  return all;
+}
+
+export async function createBackup(user: string) {
+  return hestiaCommand("v-schedule-user-backup", user);
+}
+
+export async function restoreBackup(user: string, backup: string) {
+  return hestiaCommand("v-schedule-user-restore", user, backup);
+}
+
+export async function deleteBackup(user: string, backup: string) {
+  return hestiaCommand("v-delete-user-backup", user, backup);
+}
+
 // === DEBUG ===
 export async function testConnection(): Promise<{
   ok: boolean;
