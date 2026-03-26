@@ -2,11 +2,6 @@ const HESTIA_HOST = process.env.HESTIA_HOST || "https://localhost:8083";
 const HESTIA_USER = process.env.HESTIA_USER || "admin";
 const HESTIA_PASSWORD = process.env.HESTIA_PASSWORD || "";
 
-interface HestiaResponse {
-  error?: number;
-  data?: any;
-}
-
 async function hestiaCommand(cmd: string, ...args: string[]): Promise<any> {
   const params = new URLSearchParams();
   params.append("user", HESTIA_USER);
@@ -18,28 +13,72 @@ async function hestiaCommand(cmd: string, ...args: string[]): Promise<any> {
     params.append(`arg${index + 1}`, arg);
   });
 
-  const response = await fetch(`${HESTIA_HOST}/api/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-    // Skip SSL verification for self-signed certs
-    cache: "no-store",
-  });
+  console.log(`[HestiaAPI] ${cmd} → ${HESTIA_HOST}/api/`);
+
+  let response: Response;
+  try {
+    response = await fetch(`${HESTIA_HOST}/api/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+      cache: "no-store",
+    });
+  } catch (err: any) {
+    console.error(`[HestiaAPI] Connection failed: ${err.message}`);
+    throw new Error(`Cannot connect to HestiaCP at ${HESTIA_HOST}: ${err.message}`);
+  }
 
   const text = await response.text();
+  console.log(`[HestiaAPI] ${cmd} status=${response.status} length=${text.length}`);
 
+  if (!response.ok) {
+    console.error(`[HestiaAPI] HTTP ${response.status}: ${text.substring(0, 200)}`);
+    throw new Error(`HestiaCP returned HTTP ${response.status}`);
+  }
+
+  // HestiaCP returns "0\n" for success on write commands
+  if (text.trim() === "0") {
+    return { success: true };
+  }
+
+  // Try parse JSON
   try {
-    return JSON.parse(text);
+    const data = JSON.parse(text);
+    return data;
   } catch {
-    return text;
+    // Not JSON — could be an error code or message
+    const trimmed = text.trim();
+    // HestiaCP error codes are single numbers
+    if (/^\d+$/.test(trimmed)) {
+      const code = parseInt(trimmed, 10);
+      const errorMessages: Record<number, string> = {
+        1: "Not enough arguments",
+        2: "Object or argument is not valid",
+        3: "Object doesn't exist",
+        4: "Object already exists",
+        5: "Object is suspended",
+        6: "Object is already unsuspended",
+        7: "Object can't be deleted because is used by another object",
+        8: "Object can't be created because of hosting package limits",
+        9: "Wrong password",
+        10: "Object can't be accessed (permission denied)",
+        11: "Subsystem is disabled",
+        12: "Configuration is broken",
+      };
+      throw new Error(errorMessages[code] || `HestiaCP error code: ${code}`);
+    }
+    console.error(`[HestiaAPI] Unexpected response: ${trimmed.substring(0, 300)}`);
+    throw new Error(`HestiaCP returned unexpected response: ${trimmed.substring(0, 100)}`);
   }
 }
 
 // === USERS ===
 export async function listUsers() {
   const data = await hestiaCommand("v-list-users", "json");
-  // Returns object where keys are usernames
-  // Transform to array
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    console.error("[HestiaAPI] listUsers: unexpected data type:", typeof data);
+    return [];
+  }
   return Object.entries(data).map(([username, info]: [string, any]) => ({
     username,
     ...info,
@@ -70,6 +109,9 @@ export async function unsuspendUser(username: string) {
 // === DOMAINS ===
 export async function listDomains(user: string = "admin") {
   const data = await hestiaCommand("v-list-web-domains", user, "json");
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    return [];
+  }
   return Object.entries(data).map(([domain, info]: [string, any]) => ({
     domain,
     user,
@@ -105,14 +147,142 @@ export async function addLetsEncrypt(user: string, domain: string) {
 
 // === SYSTEM ===
 export async function getSystemInfo() {
-  // v-list-sys-info returns system info
   return hestiaCommand("v-list-sys-info", "json");
+}
+
+export async function getSystemStats() {
+  // Get multiple stats for dashboard
+  const [sysInfo, users, packages] = await Promise.allSettled([
+    hestiaCommand("v-list-sys-info", "json"),
+    hestiaCommand("v-list-users", "json"),
+    hestiaCommand("v-list-user-packages", "json"),
+  ]);
+
+  const sys = sysInfo.status === "fulfilled" ? sysInfo.value : null;
+  const usersData = users.status === "fulfilled" ? users.value : null;
+  const pkgsData = packages.status === "fulfilled" ? packages.value : null;
+
+  // Count users (excluding system users)
+  let userCount = 0;
+  let totalDomains = 0;
+  let totalDisk = 0;
+  let totalBandwidth = 0;
+  if (usersData && typeof usersData === "object" && !Array.isArray(usersData)) {
+    for (const [, info] of Object.entries(usersData) as [string, any][]) {
+      userCount++;
+      totalDomains += parseInt(info.U_WEB_DOMAINS || "0", 10);
+      totalDisk += parseInt(info.U_DISK || "0", 10);
+      totalBandwidth += parseInt(info.U_BANDWIDTH || "0", 10);
+    }
+  }
+
+  // Parse system info
+  let hostname = "";
+  let os = "";
+  let cpuCount = 0;
+  let uptime = "";
+  let loadAvg = "";
+  if (sys && typeof sys === "object") {
+    // v-list-sys-info returns nested object
+    const info = sys.sysinfo || sys;
+    hostname = info.HOSTNAME || "";
+    os = info.OS || "";
+    cpuCount = parseInt(info.CPU_COUNT || "0", 10);
+    uptime = info.UPTIME || "";
+    loadAvg = info.LOADAVERAGE || "";
+  }
+
+  return {
+    users: userCount,
+    domains: totalDomains,
+    diskUsed: totalDisk, // in MB
+    bandwidth: totalBandwidth, // in MB
+    hostname,
+    os,
+    cpuCount,
+    uptime,
+    loadAvg,
+    packages: pkgsData && typeof pkgsData === "object" ? Object.keys(pkgsData).length : 0,
+  };
 }
 
 export async function listPackages() {
   const data = await hestiaCommand("v-list-user-packages", "json");
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    return [];
+  }
   return Object.entries(data).map(([name, info]: [string, any]) => ({
     name,
     ...info,
   }));
+}
+
+// === SERVICES ===
+export async function listServices() {
+  try {
+    const data = await hestiaCommand("v-list-sys-services", "json");
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
+      return [];
+    }
+    return Object.entries(data).map(([name, info]: [string, any]) => ({
+      name,
+      ...info,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// === DEBUG ===
+export async function testConnection(): Promise<{
+  ok: boolean;
+  host: string;
+  user: string;
+  error?: string;
+  rawResponse?: string;
+}> {
+  try {
+    const params = new URLSearchParams();
+    params.append("user", HESTIA_USER);
+    params.append("password", HESTIA_PASSWORD);
+    params.append("returncode", "no");
+    params.append("cmd", "v-list-users");
+    params.append("arg1", "json");
+
+    const response = await fetch(`${HESTIA_HOST}/api/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+      cache: "no-store",
+    });
+
+    const text = await response.text();
+
+    // Try to parse as JSON
+    try {
+      const json = JSON.parse(text);
+      const userCount = Object.keys(json).length;
+      return {
+        ok: true,
+        host: HESTIA_HOST,
+        user: HESTIA_USER,
+        rawResponse: `JSON with ${userCount} users: ${Object.keys(json).join(", ")}`,
+      };
+    } catch {
+      return {
+        ok: false,
+        host: HESTIA_HOST,
+        user: HESTIA_USER,
+        error: `HTTP ${response.status}, not JSON`,
+        rawResponse: text.substring(0, 500),
+      };
+    }
+  } catch (err: any) {
+    return {
+      ok: false,
+      host: HESTIA_HOST,
+      user: HESTIA_USER,
+      error: err.message,
+    };
+  }
 }

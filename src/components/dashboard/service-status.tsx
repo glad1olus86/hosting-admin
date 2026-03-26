@@ -1,30 +1,60 @@
-import { Activity, XCircle } from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { Activity, XCircle, Loader2 } from "lucide-react";
 import { GlassCard } from "@/components/layout/glass-card";
 import { cn } from "@/lib/utils";
 
 interface Service {
   name: string;
-  status: "running" | "stopped";
+  STATE?: string;
+  CPU?: string;
+  MEM?: string;
 }
 
-const services: Service[] = [
-  { name: "Nginx", status: "running" },
-  { name: "Apache", status: "running" },
-  { name: "MariaDB", status: "running" },
-  { name: "Exim (Mail)", status: "running" },
-  { name: "Dovecot", status: "running" },
-  { name: "BIND (DNS)", status: "running" },
-  { name: "PHP-FPM", status: "running" },
-  { name: "Fail2Ban", status: "running" },
-];
-
 export function ServiceStatus() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/services")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setServices(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <GlassCard>
+        <h3 className="mb-4 text-lg font-semibold text-[#134E4A]">Services</h3>
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
+          <span className="ml-2 text-sm text-muted-foreground">Loading services...</span>
+        </div>
+      </GlassCard>
+    );
+  }
+
+  if (services.length === 0) {
+    return (
+      <GlassCard>
+        <h3 className="mb-4 text-lg font-semibold text-[#134E4A]">Services</h3>
+        <p className="text-sm text-muted-foreground">Unable to load service status.</p>
+      </GlassCard>
+    );
+  }
+
   return (
     <GlassCard>
       <h3 className="mb-4 text-lg font-semibold text-[#134E4A]">Services</h3>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {services.map((service) => {
-          const isRunning = service.status === "running";
+          const isRunning = service.STATE === "running";
           return (
             <div
               key={service.name}
@@ -54,7 +84,7 @@ export function ServiceStatus() {
                     isRunning ? "text-emerald-600" : "text-red-500"
                   )}
                 >
-                  {isRunning ? "Running" : "Stopped"}
+                  {isRunning ? "Running" : service.STATE || "Stopped"}
                 </p>
               </div>
             </div>
