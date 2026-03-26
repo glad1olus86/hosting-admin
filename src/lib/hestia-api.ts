@@ -234,18 +234,56 @@ export async function listServices() {
 }
 
 // === FILE SYSTEM ===
+// Raw command that returns text (for commands that don't support JSON)
+async function hestiaCommandRaw(cmd: string, ...args: string[]): Promise<string> {
+  const params = new URLSearchParams();
+  params.append("user", HESTIA_USER);
+  params.append("password", HESTIA_PASSWORD);
+  params.append("returncode", "no");
+  params.append("cmd", cmd);
+  args.forEach((arg, index) => {
+    params.append(`arg${index + 1}`, arg);
+  });
+
+  const response = await fetch(`${HESTIA_HOST}/api/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) throw new Error(`HestiaCP returned HTTP ${response.status}`);
+  return response.text();
+}
+
 export async function listDirectory(user: string, path: string = "/") {
-  const data = await hestiaCommand("v-list-fs-directory", user, path, "json");
-  if (typeof data !== "object" || data === null) return [];
-  // Returns object with filenames as keys
-  return Object.entries(data).map(([name, info]: [string, any]) => ({
-    name,
-    ...info,
-  }));
+  // v-list-fs-directory returns pipe-delimited format:
+  // TYPE|PERMISSIONS|DATE|TIME|OWNER|GROUP|SIZE|NAME
+  const raw = await hestiaCommandRaw("v-list-fs-directory", user, path);
+  const trimmed = raw.trim();
+  if (!trimmed || /^\d+$/.test(trimmed)) return [];
+
+  const lines = trimmed.split("\n").filter(Boolean);
+  return lines.map((line) => {
+    const parts = line.split("|");
+    if (parts.length >= 8) {
+      return {
+        name: parts.slice(7).join("|").trim(), // filename may contain pipes
+        TYPE: parts[0]?.trim(),
+        PERMISSIONS: parts[1]?.trim(),
+        DATE: parts[2]?.trim(),
+        TIME: parts[3]?.trim(),
+        OWNER: parts[4]?.trim(),
+        GROUP: parts[5]?.trim(),
+        SIZE: parts[6]?.trim(),
+      };
+    }
+    return { name: line.trim(), TYPE: "f" };
+  }).filter((f) => f.name && f.name !== "." && f.name !== "..");
 }
 
 export async function readFile(user: string, path: string) {
-  return hestiaCommand("v-open-fs-file", user, path);
+  return hestiaCommandRaw("v-open-fs-file", user, path);
 }
 
 export async function createDirectory(user: string, path: string) {
