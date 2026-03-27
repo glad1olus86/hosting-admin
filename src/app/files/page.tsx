@@ -13,6 +13,7 @@ import {
   Home,
   User,
   Upload,
+  Download,
 } from "lucide-react";
 import { GlassCard } from "@/components/layout/glass-card";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,7 @@ interface HestiaUser {
 export default function FilesPage() {
   const [users, setUsers] = useState<HestiaUser[]>([]);
   const [selectedUser, setSelectedUser] = useState("");
-  const [currentPath, setCurrentPath] = useState("/home");
+  const [currentPath, setCurrentPath] = useState("");
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +74,8 @@ export default function FilesPage() {
 
   const [uploadLoading, setUploadLoading] = useState(false);
 
+  const basePath = selectedUser ? `/home/${selectedUser}/web` : "";
+
   const fetchUsers = useCallback(async () => {
     try {
       const res = await fetch("/api/users");
@@ -84,7 +87,7 @@ export default function FilesPage() {
   }, []);
 
   const fetchFiles = useCallback(async () => {
-    if (!selectedUser) return;
+    if (!selectedUser || !currentPath || !currentPath.startsWith("/home/")) return;
     try {
       setError(null);
       setLoading(true);
@@ -107,11 +110,16 @@ export default function FilesPage() {
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   useEffect(() => {
-    if (selectedUser) setCurrentPath(`/home/${selectedUser}/web`);
+    if (selectedUser) {
+      const newBase = `/home/${selectedUser}/web`;
+      setCurrentPath(newBase);
+    }
   }, [selectedUser]);
 
   useEffect(() => {
-    if (selectedUser && currentPath) fetchFiles();
+    if (selectedUser && currentPath && currentPath.includes("/web")) {
+      fetchFiles();
+    }
   }, [selectedUser, currentPath, fetchFiles]);
 
   const navigateTo = (name: string) => {
@@ -119,8 +127,7 @@ export default function FilesPage() {
   };
 
   const navigateUp = () => {
-    const basePath = `/home/${selectedUser}/web`;
-    if (currentPath === basePath) return;
+    if (!basePath || currentPath === basePath) return;
     const parts = currentPath.split("/").filter(Boolean);
     parts.pop();
     const newPath = "/" + parts.join("/");
@@ -149,6 +156,12 @@ export default function FilesPage() {
     } finally {
       setViewerLoading(false);
     }
+  };
+
+  const handleDownload = (file: FileEntry) => {
+    const filePath = `${currentPath}/${file.name}`;
+    const url = `/api/files/download?user=${encodeURIComponent(selectedUser)}&path=${encodeURIComponent(filePath)}`;
+    window.open(url, "_blank");
   };
 
   const handleCreateFolder = async () => {
@@ -258,7 +271,7 @@ export default function FilesPage() {
                   </div>
                   <div>
                     <p className="font-medium text-[#134E4A]">{u.username}</p>
-                    <p className="text-xs text-muted-foreground">/home/{u.username}</p>
+                    <p className="text-xs text-muted-foreground">/home/{u.username}/web</p>
                   </div>
                 </button>
               ))}
@@ -315,7 +328,7 @@ export default function FilesPage() {
       <GlassCard className="!py-3">
         <div className="flex items-center gap-1 text-sm overflow-x-auto">
           <button
-            onClick={() => setCurrentPath(`/home/${selectedUser}/web`)}
+            onClick={() => setCurrentPath(basePath)}
             className="flex items-center gap-1 text-teal-600 hover:text-teal-800 cursor-pointer shrink-0"
           >
             <Home className="h-4 w-4" />
@@ -353,7 +366,7 @@ export default function FilesPage() {
           </div>
         ) : (
           <div className="space-y-0.5">
-            {currentPath !== `/home/${selectedUser}/web` && (
+            {currentPath !== basePath && (
               <button
                 onClick={navigateUp}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-white/50 cursor-pointer"
@@ -383,6 +396,7 @@ export default function FilesPage() {
                     key={file.name}
                     className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-white/50"
                   >
+                    {/* Icon */}
                     <div className={cn(
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
                       isDir ? "bg-amber-50 text-amber-500" : "bg-slate-50 text-slate-400"
@@ -390,9 +404,10 @@ export default function FilesPage() {
                       {isDir ? <Folder className="h-5 w-5" /> : <File className="h-5 w-5" />}
                     </div>
 
+                    {/* Name */}
                     {isDir ? (
-                      <button onClick={() => navigateTo(file.name)} className="flex-1 text-left cursor-pointer">
-                        <p className="text-sm font-medium text-[#134E4A] hover:text-teal-600 transition-colors">{file.name}</p>
+                      <button onClick={() => navigateTo(file.name)} className="flex-1 text-left cursor-pointer min-w-0">
+                        <p className="text-sm font-medium text-[#134E4A] hover:text-teal-600 transition-colors truncate">{file.name}</p>
                       </button>
                     ) : (
                       <div className="flex-1 min-w-0">
@@ -400,21 +415,30 @@ export default function FilesPage() {
                       </div>
                     )}
 
-                    <div className="hidden items-center gap-4 text-xs text-muted-foreground sm:flex">
-                      {file.PERMISSIONS && <span className="font-mono">{file.PERMISSIONS}</span>}
-                      {file.SIZE && !isDir && <span className="w-20 text-right">{formatSize(file.SIZE)}</span>}
-                      {file.DATE && <span className="w-20 text-right">{file.DATE}</span>}
+                    {/* Metadata — fixed widths, always visible on sm+ */}
+                    <div className="hidden sm:flex items-center text-xs text-muted-foreground shrink-0">
+                      <span className="w-16 text-right font-mono">{file.PERMISSIONS || "—"}</span>
+                      <span className="w-16 text-right">{!isDir && file.SIZE ? formatSize(file.SIZE) : "—"}</span>
+                      <span className="w-24 text-right">{file.DATE || "—"}</span>
                     </div>
 
-                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      {canView && (
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 cursor-pointer" onClick={() => handleViewFile(file)} title="View">
-                          <Eye className="h-4 w-4 text-teal-500" />
+                    {/* Actions — fixed width container, always takes space */}
+                    <div className="flex items-center shrink-0 w-[88px] justify-end">
+                      <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                        {canView && (
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 cursor-pointer" onClick={() => handleViewFile(file)} title="View">
+                            <Eye className="h-4 w-4 text-teal-500" />
+                          </Button>
+                        )}
+                        {!isDir && (
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 cursor-pointer" onClick={() => handleDownload(file)} title="Download">
+                            <Download className="h-4 w-4 text-blue-500" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 cursor-pointer" onClick={() => { setDeleteTarget(file); setDeleteOpen(true); }} title="Delete">
+                          <Trash2 className="h-4 w-4 text-red-400" />
                         </Button>
-                      )}
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 cursor-pointer" onClick={() => { setDeleteTarget(file); setDeleteOpen(true); }} title="Delete">
-                        <Trash2 className="h-4 w-4 text-red-400" />
-                      </Button>
+                      </div>
                     </div>
                   </div>
                 );

@@ -273,6 +273,28 @@ async function hestiaCommandRaw(cmd: string, ...args: string[]): Promise<string>
   return response.text();
 }
 
+// Returns raw bytes (for binary file downloads)
+async function hestiaCommandBuffer(cmd: string, ...args: string[]): Promise<ArrayBuffer> {
+  const params = new URLSearchParams();
+  params.append("user", HESTIA_USER);
+  params.append("password", HESTIA_PASSWORD);
+  params.append("returncode", "no");
+  params.append("cmd", cmd);
+  args.forEach((arg, index) => {
+    params.append(`arg${index + 1}`, arg);
+  });
+
+  const response = await fetch(`${HESTIA_HOST}/api/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) throw new Error(`HestiaCP returned HTTP ${response.status}`);
+  return response.arrayBuffer();
+}
+
 // For action commands (create, delete, etc.) — uses returncode=yes for reliable error detection
 async function hestiaActionCommand(cmd: string, ...args: string[]): Promise<void> {
   const params = new URLSearchParams();
@@ -345,6 +367,10 @@ export async function listDirectory(user: string, path: string = "/") {
 
 export async function readFile(user: string, path: string) {
   return hestiaCommandRaw("v-open-fs-file", user, path);
+}
+
+export async function readFileBuffer(user: string, path: string) {
+  return hestiaCommandBuffer("v-open-fs-file", user, path);
 }
 
 export async function createDirectory(user: string, path: string) {
@@ -435,19 +461,73 @@ export async function listMailAccounts(user: string, domain: string) {
 }
 
 export async function addMailDomain(user: string, domain: string) {
-  return hestiaCommand("v-add-mail-domain", user, domain);
+  await hestiaActionCommand("v-add-mail-domain", user, domain);
+  // Enable DKIM by default
+  try { await hestiaActionCommand("v-add-mail-domain-dkim", user, domain); } catch {}
+  return { success: true };
 }
 
 export async function deleteMailDomain(user: string, domain: string) {
-  return hestiaCommand("v-delete-mail-domain", user, domain);
+  await hestiaActionCommand("v-delete-mail-domain", user, domain);
+  return { success: true };
 }
 
 export async function addMailAccount(user: string, domain: string, account: string, password: string) {
-  return hestiaCommand("v-add-mail-account", user, domain, account, password);
+  await hestiaActionCommand("v-add-mail-account", user, domain, account, password);
+  return { success: true };
 }
 
 export async function deleteMailAccount(user: string, domain: string, account: string) {
-  return hestiaCommand("v-delete-mail-account", user, domain, account);
+  await hestiaActionCommand("v-delete-mail-account", user, domain, account);
+  return { success: true };
+}
+
+export async function toggleMailDkim(user: string, domain: string, enable: boolean) {
+  if (enable) {
+    await hestiaActionCommand("v-add-mail-domain-dkim", user, domain);
+  } else {
+    await hestiaActionCommand("v-delete-mail-domain-dkim", user, domain);
+  }
+}
+
+export async function toggleMailAntivirus(user: string, domain: string, enable: boolean) {
+  if (enable) {
+    await hestiaActionCommand("v-add-mail-domain-antivirus", user, domain);
+  } else {
+    await hestiaActionCommand("v-delete-mail-domain-antivirus", user, domain);
+  }
+}
+
+export async function toggleMailAntispam(user: string, domain: string, enable: boolean) {
+  if (enable) {
+    await hestiaActionCommand("v-add-mail-domain-antispam", user, domain);
+  } else {
+    await hestiaActionCommand("v-delete-mail-domain-antispam", user, domain);
+  }
+}
+
+export async function setMailCatchall(user: string, domain: string, email: string) {
+  await hestiaActionCommand("v-change-mail-domain-catchall", user, domain, email);
+}
+
+export async function removeMailCatchall(user: string, domain: string) {
+  await hestiaActionCommand("v-delete-mail-domain-catchall", user, domain);
+}
+
+export async function changeMailAccountPassword(user: string, domain: string, account: string, password: string) {
+  await hestiaActionCommand("v-change-mail-account-password", user, domain, account, password);
+}
+
+export async function changeMailAccountQuota(user: string, domain: string, account: string, quota: string) {
+  await hestiaActionCommand("v-change-mail-account-quota", user, domain, account, quota);
+}
+
+export async function suspendMailAccount(user: string, domain: string, account: string) {
+  await hestiaActionCommand("v-suspend-mail-account", user, domain, account);
+}
+
+export async function unsuspendMailAccount(user: string, domain: string, account: string) {
+  await hestiaActionCommand("v-unsuspend-mail-account", user, domain, account);
 }
 
 // === DNS ===
@@ -484,14 +564,29 @@ export async function listDnsRecords(user: string, domain: string) {
   }));
 }
 
-export async function addDnsRecord(user: string, domain: string, recordId: string, type: string, value: string, priority?: string) {
-  const args = [user, domain, recordId, type, value];
-  if (priority) args.push(priority);
-  return hestiaCommand("v-add-dns-record", ...args);
+// v-add-dns-record USER DOMAIN RECORD TYPE VALUE [PRIORITY] [ID] [RESTART] [TTL]
+export async function addDnsRecord(user: string, domain: string, record: string, type: string, value: string, priority?: string, ttl?: string) {
+  const args: string[] = [user, domain, record, type, value];
+  args.push(priority || ""); // priority
+  args.push("");             // id (auto)
+  args.push("");             // restart
+  if (ttl) args.push(ttl);
+  await hestiaActionCommand("v-add-dns-record", ...args);
+  return { success: true };
 }
 
 export async function deleteDnsRecord(user: string, domain: string, recordId: string) {
-  return hestiaCommand("v-delete-dns-record", user, domain, recordId);
+  await hestiaActionCommand("v-delete-dns-record", user, domain, recordId);
+  return { success: true };
+}
+
+// Edit = delete old + add new
+export async function editDnsRecord(
+  user: string, domain: string, oldId: string,
+  record: string, type: string, value: string, priority?: string, ttl?: string
+) {
+  await deleteDnsRecord(user, domain, oldId);
+  return addDnsRecord(user, domain, record, type, value, priority, ttl);
 }
 
 // === SSL ===
