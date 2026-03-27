@@ -36,19 +36,21 @@ async function hestiaCommand(cmd: string, ...args: string[]): Promise<any> {
     throw new Error(`HestiaCP returned HTTP ${response.status}`);
   }
 
-  // HestiaCP returns "0\n" for success on write commands
-  if (text.trim() === "0") {
+  const trimmed = text.trim();
+
+  // HestiaCP success responses for write commands:
+  // "0", "OK", "ok", empty string, or any "0\n" variant
+  const successValues = ["0", "ok", ""];
+  if (successValues.includes(trimmed.toLowerCase())) {
     return { success: true };
   }
 
-  // Try parse JSON
+  // Try parse JSON (for list/read commands)
   try {
     const data = JSON.parse(text);
     return data;
   } catch {
-    // Not JSON — could be an error code or message
-    const trimmed = text.trim();
-    // HestiaCP error codes are single numbers
+    // HestiaCP error codes are single numbers (1-12+)
     if (/^\d+$/.test(trimmed)) {
       const code = parseInt(trimmed, 10);
       const errorMessages: Record<number, string> = {
@@ -67,6 +69,14 @@ async function hestiaCommand(cmd: string, ...args: string[]): Promise<any> {
       };
       throw new Error(errorMessages[code] || `HestiaCP error code: ${code}`);
     }
+
+    // Some commands return plain text success messages like "OK", "Done", etc.
+    // If HTTP was 200 and text is short, treat as success
+    if (trimmed.length < 100 && response.ok) {
+      console.log(`[HestiaAPI] ${cmd} treating as success: "${trimmed}"`);
+      return { success: true, message: trimmed };
+    }
+
     console.error(`[HestiaAPI] Unexpected response: ${trimmed.substring(0, 300)}`);
     throw new Error(`HestiaCP returned unexpected response: ${trimmed.substring(0, 100)}`);
   }
