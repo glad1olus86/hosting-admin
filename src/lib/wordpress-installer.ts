@@ -113,8 +113,21 @@ export async function installWordPress(jobId: string, params: WpInstallParams) {
     updateJob(jobId, { step: 6, message: "Setting permissions..." });
     await execAsRoot(`chown -R ${user}:${user} ${path}`);
 
-    // Step 7: Rebuild web domain (creates PHP-FPM pool)
-    updateJob(jobId, { step: 7, message: "Rebuilding web domain config..." });
+    // Step 7: Fix domain IP + rebuild (creates PHP-FPM pool)
+    updateJob(jobId, { step: 7, message: "Configuring web server..." });
+    // Get DNS A record IP for the domain
+    const dnsResult = await execAsRoot(`dig +short ${domain} A | head -1`);
+    const dnsIp = dnsResult.stdout.trim();
+    if (dnsIp && /^\d+\.\d+\.\d+\.\d+$/.test(dnsIp)) {
+      // Get current domain IP
+      const domainInfo = await execAsRoot(`/usr/local/hestia/bin/v-list-web-domain ${user} ${domain} json`);
+      const currentIpMatch = domainInfo.stdout.match(/"IP":\s*"([^"]+)"/);
+      const currentIp = currentIpMatch ? currentIpMatch[1] : "";
+      // If IPs don't match, fix it
+      if (currentIp && currentIp !== dnsIp) {
+        await execAsRoot(`/usr/local/hestia/bin/v-change-web-domain-ip ${user} ${domain} ${dnsIp}`);
+      }
+    }
     await execAsRoot(`/usr/local/hestia/bin/v-rebuild-web-domain ${user} ${domain}`);
 
     // Step 8: Install plugins
