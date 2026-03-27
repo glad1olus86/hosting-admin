@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   ShieldOff,
   Loader2,
+  Shield,
 } from "lucide-react";
 import { GlassCard } from "@/components/layout/glass-card";
 import { Button } from "@/components/ui/button";
@@ -37,25 +38,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface HestiaDomain {
   domain: string;
   user: string;
   IP: string;
   IP6: string;
-  DOCUMENT_ROOT: string;
   U_DISK: string;
   U_BANDWIDTH: string;
-  TPL: string;
-  ALIAS: string;
   SSL: string;
-  SSL_HOME: string;
   LETSENCRYPT: string;
   BACKEND: string;
   PROXY: string;
-  PROXY_EXT: string;
   SUSPENDED: string;
-  TIME: string;
   DATE: string;
 }
 
@@ -68,6 +68,9 @@ export default function DomainsPage() {
   const [users, setUsers] = useState<HestiaUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Track which domains are currently getting SSL
+  const [sslLoading, setSslLoading] = useState<Set<string>>(new Set());
 
   // Add domain dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -107,15 +110,41 @@ export default function DomainsPage() {
       if (!res.ok) return;
       const data = await res.json();
       if (!data.error) setUsers(data);
-    } catch {
-      // Non-critical, silently fail
-    }
+    } catch {}
   }, []);
 
   useEffect(() => {
     fetchDomains();
     fetchUsers();
   }, [fetchDomains, fetchUsers]);
+
+  // Request SSL for a domain (async, non-blocking)
+  const requestSsl = useCallback(async (user: string, domain: string) => {
+    const key = `${user}:${domain}`;
+    setSslLoading((prev) => new Set(prev).add(key));
+    try {
+      const res = await fetch("/api/domains", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user, domain }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        console.error(`SSL failed for ${domain}: ${data.error}`);
+        alert(`SSL error for ${domain}: ${data.error || "Unknown error"}`);
+      }
+      // Refresh domains to get updated SSL status
+      await fetchDomains();
+    } catch (err: any) {
+      alert(`SSL request failed: ${err.message}`);
+    } finally {
+      setSslLoading((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  }, [fetchDomains]);
 
   const handleAddDomain = async () => {
     if (!addForm.user || !addForm.domain) {
@@ -124,17 +153,31 @@ export default function DomainsPage() {
     }
     setAddLoading(true);
     try {
+      // Step 1: Create domain
       const res = await fetch("/api/domains", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(addForm),
+        body: JSON.stringify({ user: addForm.user, domain: addForm.domain }),
       });
       const data = await res.json();
       if (!res.ok || data.error)
         throw new Error(data.error || "Failed to add domain");
+
+      const wantSsl = addForm.ssl;
+      const domainUser = addForm.user;
+      const domainName = addForm.domain;
+
+      // Close dialog and reset form immediately
       setAddDialogOpen(false);
       setAddForm({ user: "", domain: "", ssl: false });
+
+      // Refresh domains to show the new one
       await fetchDomains();
+
+      // Step 2: Request SSL in background (non-blocking)
+      if (wantSsl) {
+        requestSsl(domainUser, domainName);
+      }
     } catch (err: any) {
       alert(err.message || "Failed to add domain");
     } finally {
@@ -168,7 +211,7 @@ export default function DomainsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[#134E4A]">Domains</h1>
         <Button
-          className="bg-teal-600 text-white hover:bg-teal-700"
+          className="bg-teal-600 text-white hover:bg-teal-700 cursor-pointer"
           onClick={() => setAddDialogOpen(true)}
         >
           <Plus className="h-4 w-4" />
@@ -203,7 +246,6 @@ export default function DomainsPage() {
                 <TableHead>SSL</TableHead>
                 <TableHead>IP</TableHead>
                 <TableHead>Proxy</TableHead>
-                <TableHead>Backend</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -212,6 +254,9 @@ export default function DomainsPage() {
               {domains.map((d) => {
                 const hasSSL = d.SSL !== "" && d.SSL !== "no";
                 const isSuspended = d.SUSPENDED !== "no";
+                const sslKey = `${d.user}:${d.domain}`;
+                const isGettingSsl = sslLoading.has(sslKey);
+
                 return (
                   <TableRow key={`${d.user}-${d.domain}`}>
                     <TableCell className="font-medium text-[#134E4A]">
@@ -219,10 +264,41 @@ export default function DomainsPage() {
                     </TableCell>
                     <TableCell>{d.user}</TableCell>
                     <TableCell>
-                      {hasSSL ? (
-                        <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                      {isGettingSsl ? (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div className="flex items-center gap-1.5">
+                              <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+                              <span className="text-xs text-amber-600">SSL...</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Requesting SSL certificate...
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : hasSSL ? (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            SSL active{d.LETSENCRYPT === "yes" ? " (Let's Encrypt)" : ""}
+                          </TooltipContent>
+                        </Tooltip>
                       ) : (
-                        <ShieldOff className="h-5 w-5 text-gray-400" />
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <button
+                              onClick={() => requestSsl(d.user, d.domain)}
+                              className="cursor-pointer hover:scale-110 transition-transform"
+                            >
+                              <ShieldOff className="h-5 w-5 text-gray-400 hover:text-teal-500 transition-colors" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Click to request SSL certificate
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-xs">
@@ -233,7 +309,6 @@ export default function DomainsPage() {
                         {d.PROXY || "none"}
                       </Badge>
                     </TableCell>
-                    <TableCell>{d.BACKEND || "none"}</TableCell>
                     <TableCell>
                       {isSuspended ? (
                         <Badge className="bg-red-100 text-red-700 border-red-200">
@@ -246,21 +321,17 @@ export default function DomainsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setDeleteTarget({
-                              user: d.user,
-                              domain: d.domain,
-                            });
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setDeleteTarget({ user: d.user, domain: d.domain });
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
@@ -285,7 +356,7 @@ export default function DomainsPage() {
               <Select
                 value={addForm.user}
                 onValueChange={(val) =>
-                  setAddForm((f) => ({ ...f, user: val as string }))
+                  val && setAddForm((f) => ({ ...f, user: val }))
                 }
               >
                 <SelectTrigger className="w-full">
@@ -327,13 +398,11 @@ export default function DomainsPage() {
             </div>
           </div>
           <DialogFooter>
-            <DialogClose
-              render={<Button variant="outline" />}
-            >
+            <DialogClose render={<Button variant="outline" />}>
               Cancel
             </DialogClose>
             <Button
-              className="bg-teal-600 text-white hover:bg-teal-700"
+              className="bg-teal-600 text-white hover:bg-teal-700 cursor-pointer"
               onClick={handleAddDomain}
               disabled={addLoading}
             >
@@ -357,15 +426,14 @@ export default function DomainsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose
-              render={<Button variant="outline" />}
-            >
+            <DialogClose render={<Button variant="outline" />}>
               Cancel
             </DialogClose>
             <Button
               variant="destructive"
               onClick={handleDeleteDomain}
               disabled={deleteLoading}
+              className="cursor-pointer"
             >
               {deleteLoading && <Loader2 className="h-4 w-4 animate-spin" />}
               Delete
