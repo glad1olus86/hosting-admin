@@ -52,7 +52,7 @@ export async function installWordPress(jobId: string, params: WpInstallParams) {
   const path = `/home/${user}/web/${domain}/public_html`;
   const wpCliPath = `/home/${user}/.wp-cli/wp`;
 
-  const totalSteps = 6 + (plugins.length > 0 ? 1 : 0);
+  const totalSteps = 7 + (plugins.length > 0 ? 1 : 0);
 
   wpJobs.set(jobId, {
     step: 0,
@@ -113,9 +113,13 @@ export async function installWordPress(jobId: string, params: WpInstallParams) {
     updateJob(jobId, { step: 6, message: "Setting permissions..." });
     await execAsRoot(`chown -R ${user}:${user} ${path}`);
 
-    // Step 7: Install plugins
+    // Step 7: Rebuild web domain (creates PHP-FPM pool)
+    updateJob(jobId, { step: 7, message: "Rebuilding web domain config..." });
+    await execAsRoot(`/usr/local/hestia/bin/v-rebuild-web-domain ${user} ${domain}`);
+
+    // Step 8: Install plugins
     if (plugins.length > 0) {
-      updateJob(jobId, { step: 7, message: `Installing plugins: ${plugins.join(", ")}...` });
+      updateJob(jobId, { step: 8, message: `Installing plugins: ${plugins.join(", ")}...` });
       for (const plugin of plugins) {
         await execAsUser(user, `php ${wpCliPath} plugin install ${plugin} --activate --path=${path}`);
       }
