@@ -8,6 +8,13 @@ import {
   ShieldOff,
   Loader2,
   Shield,
+  Zap,
+  Eye,
+  EyeOff,
+  Copy,
+  CheckCircle2,
+  XCircle,
+  ExternalLink,
 } from "lucide-react";
 import { GlassCard } from "@/components/layout/glass-card";
 import { Button } from "@/components/ui/button";
@@ -88,6 +95,14 @@ export default function DomainsPage() {
     domain: string;
   } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // WordPress install
+  const [wpDialogOpen, setWpDialogOpen] = useState(false);
+  const [wpTarget, setWpTarget] = useState<{ user: string; domain: string } | null>(null);
+  const [wpForm, setWpForm] = useState({ admin_user: "admin", admin_password: "", admin_email: "", plugins: ["updraftplus"] });
+  const [showWpPassword, setShowWpPassword] = useState(false);
+  const [wpJobId, setWpJobId] = useState<string | null>(null);
+  const [wpStatus, setWpStatus] = useState<{ step: number; totalSteps: number; message: string; status: string; result?: any; error?: string } | null>(null);
 
   const fetchDomains = useCallback(async () => {
     try {
@@ -206,6 +221,68 @@ export default function DomainsPage() {
     }
   };
 
+  // WordPress polling
+  useEffect(() => {
+    if (!wpJobId) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/wordpress/status?jobId=${wpJobId}`);
+        const data = await res.json();
+        if (data.error && res.status === 404) return;
+        setWpStatus(data);
+        if (data.status === "done" || data.status === "error") {
+          clearInterval(interval);
+        }
+      } catch {}
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [wpJobId]);
+
+  const handleWpInstall = async () => {
+    if (!wpTarget || !wpForm.admin_user || !wpForm.admin_password || !wpForm.admin_email) return;
+    try {
+      const res = await fetch("/api/wordpress/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user: wpTarget.user,
+          domain: wpTarget.domain,
+          admin_user: wpForm.admin_user,
+          admin_password: wpForm.admin_password,
+          admin_email: wpForm.admin_email,
+          plugins: wpForm.plugins,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to start install");
+      setWpJobId(data.jobId);
+      setWpStatus({ step: 0, totalSteps: 7, message: "Starting...", status: "installing" });
+    } catch (err: any) {
+      setWpStatus({ step: 0, totalSteps: 7, message: err.message, status: "error", error: err.message });
+    }
+  };
+
+  const generatePassword = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let pwd = "";
+    for (let i = 0; i < 16; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+    return pwd;
+  };
+
+  const togglePlugin = (slug: string) => {
+    setWpForm((f) => ({
+      ...f,
+      plugins: f.plugins.includes(slug) ? f.plugins.filter((p) => p !== slug) : [...f.plugins, slug],
+    }));
+  };
+
+  const wpPluginsList = [
+    { slug: "updraftplus", name: "UpdraftPlus", desc: "Backup & restore" },
+    { slug: "woocommerce", name: "WooCommerce", desc: "E-commerce" },
+    { slug: "wordpress-seo", name: "Yoast SEO", desc: "SEO optimization" },
+    { slug: "contact-form-7", name: "Contact Form 7", desc: "Forms" },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -321,17 +398,35 @@ export default function DomainsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="cursor-pointer"
-                        onClick={() => {
-                          setDeleteTarget({ user: d.user, domain: d.domain });
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-pointer h-8 w-8 p-0"
+                          title="WordPress Quick Install"
+                          onClick={() => {
+                            setWpTarget({ user: d.user, domain: d.domain });
+                            setWpForm({ admin_user: "admin", admin_password: "", admin_email: "", plugins: ["updraftplus"] });
+                            setWpJobId(null);
+                            setWpStatus(null);
+                            setShowWpPassword(false);
+                            setWpDialogOpen(true);
+                          }}
+                        >
+                          <Zap className="h-4 w-4 text-amber-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-pointer h-8 w-8 p-0"
+                          onClick={() => {
+                            setDeleteTarget({ user: d.user, domain: d.domain });
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -438,6 +533,205 @@ export default function DomainsPage() {
               {deleteLoading && <Loader2 className="h-4 w-4 animate-spin" />}
               Delete
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* WordPress Quick Install Dialog */}
+      <Dialog open={wpDialogOpen} onOpenChange={setWpDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-amber-500" />
+              WordPress Quick Install
+            </DialogTitle>
+            <DialogDescription>
+              Install WordPress on <strong>{wpTarget?.domain}</strong>
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Form — show only when not installing */}
+          {!wpJobId && !wpStatus && (
+            <div className="grid gap-4 py-2">
+              <div className="grid gap-2">
+                <Label>Admin Username</Label>
+                <Input
+                  value={wpForm.admin_user}
+                  onChange={(e) => setWpForm((f) => ({ ...f, admin_user: e.target.value }))}
+                  placeholder="admin"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Admin Password</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      type={showWpPassword ? "text" : "password"}
+                      value={wpForm.admin_password}
+                      onChange={(e) => setWpForm((f) => ({ ...f, admin_password: e.target.value }))}
+                      placeholder="Strong password"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                      onClick={() => setShowWpPassword(!showWpPassword)}
+                    >
+                      {showWpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="cursor-pointer shrink-0"
+                    onClick={() => {
+                      setWpForm((f) => ({ ...f, admin_password: generatePassword() }));
+                      setShowWpPassword(true);
+                    }}
+                  >
+                    Generate
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>Admin Email</Label>
+                <Input
+                  type="email"
+                  value={wpForm.admin_email}
+                  onChange={(e) => setWpForm((f) => ({ ...f, admin_email: e.target.value }))}
+                  placeholder="admin@example.com"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Plugins</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {wpPluginsList.map((p) => (
+                    <label
+                      key={p.slug}
+                      className={`flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer transition-all ${
+                        wpForm.plugins.includes(p.slug)
+                          ? "border-teal-300 bg-teal-50"
+                          : "border-slate-200 bg-white/50 hover:bg-white/80"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={wpForm.plugins.includes(p.slug)}
+                        onChange={() => togglePlugin(p.slug)}
+                        className="h-4 w-4 rounded border-gray-300 text-teal-600"
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-[#134E4A]">{p.name}</p>
+                        <p className="text-[11px] text-muted-foreground">{p.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Progress — show during and after install */}
+          {wpStatus && (
+            <div className="py-4 space-y-4">
+              {/* Progress bar */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Step {wpStatus.step} / {wpStatus.totalSteps}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {Math.round((wpStatus.step / wpStatus.totalSteps) * 100)}%
+                  </span>
+                </div>
+                <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      wpStatus.status === "error"
+                        ? "bg-red-500"
+                        : wpStatus.status === "done"
+                        ? "bg-emerald-500"
+                        : "bg-teal-500"
+                    }`}
+                    style={{ width: `${(wpStatus.step / wpStatus.totalSteps) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Status message */}
+              <div className={`flex items-center gap-2 rounded-lg border p-3 ${
+                wpStatus.status === "error"
+                  ? "border-red-200 bg-red-50"
+                  : wpStatus.status === "done"
+                  ? "border-emerald-200 bg-emerald-50"
+                  : "border-teal-200 bg-teal-50"
+              }`}>
+                {wpStatus.status === "installing" && <Loader2 className="h-4 w-4 animate-spin text-teal-600 shrink-0" />}
+                {wpStatus.status === "done" && <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />}
+                {wpStatus.status === "error" && <XCircle className="h-4 w-4 text-red-600 shrink-0" />}
+                <p className="text-sm">{wpStatus.message}</p>
+              </div>
+
+              {/* Success result */}
+              {wpStatus.status === "done" && wpStatus.result && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4 space-y-3">
+                  <p className="text-sm font-medium text-emerald-700">WordPress installed successfully!</p>
+                  <div className="grid gap-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Admin URL:</span>
+                      <a
+                        href={wpStatus.result.admin_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-teal-600 hover:underline font-mono text-xs"
+                      >
+                        {wpStatus.result.admin_url}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Username:</span>
+                      <button
+                        className="flex items-center gap-1 font-mono text-xs cursor-pointer hover:text-teal-600"
+                        onClick={() => navigator.clipboard.writeText(wpStatus.result.admin_user)}
+                      >
+                        {wpStatus.result.admin_user}
+                        <Copy className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Password:</span>
+                      <button
+                        className="flex items-center gap-1 font-mono text-xs cursor-pointer hover:text-teal-600"
+                        onClick={() => navigator.clipboard.writeText(wpStatus.result.admin_password)}
+                      >
+                        {wpStatus.result.admin_password}
+                        <Copy className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            {!wpJobId && !wpStatus ? (
+              <>
+                <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+                <Button
+                  className="bg-amber-500 text-white hover:bg-amber-600 cursor-pointer"
+                  onClick={handleWpInstall}
+                  disabled={!wpForm.admin_user || !wpForm.admin_password || !wpForm.admin_email}
+                >
+                  <Zap className="h-4 w-4 mr-1" />
+                  Install WordPress
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" className="cursor-pointer" onClick={() => setWpDialogOpen(false)}>
+                {wpStatus?.status === "done" || wpStatus?.status === "error" ? "Close" : "Close (continues in background)"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -15,6 +15,7 @@ services:
       - SSH_PORT=49222
       - SSH_USER=serveradmin
       - SSH_KEY_PATH=/keys/id_ed25519
+      - SSH_SUDO_PASSWORD=Afonya~rulit123
     volumes:
       - ./keys:/keys:ro
     extra_hosts:

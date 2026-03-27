@@ -47,6 +47,28 @@ export async function uploadToTemp(buffer: Buffer, filename: string): Promise<st
   return tmpPath;
 }
 
+const SSH_SUDO_PASSWORD = process.env.SSH_SUDO_PASSWORD || "";
+
+// Execute a command as a specific system user via sudo
+export async function execAsUser(user: string, command: string): Promise<{ stdout: string; stderr: string; code: number }> {
+  return withSSH(async (ssh) => {
+    const escaped = command.replace(/'/g, "'\\''");
+    const sudoCmd = `echo '${SSH_SUDO_PASSWORD.replace(/'/g, "'\\''")}' | sudo -S -u ${user} bash -c '${escaped}' 2>&1`;
+    const result = await ssh.execCommand(sudoCmd);
+    return { stdout: result.stdout, stderr: result.stderr, code: result.code ?? 0 };
+  });
+}
+
+// Execute a command as root via sudo
+export async function execAsRoot(command: string): Promise<{ stdout: string; stderr: string; code: number }> {
+  return withSSH(async (ssh) => {
+    const escaped = command.replace(/'/g, "'\\''");
+    const sudoCmd = `echo '${SSH_SUDO_PASSWORD.replace(/'/g, "'\\''")}' | sudo -S bash -c '${escaped}' 2>&1`;
+    const result = await ssh.execCommand(sudoCmd);
+    return { stdout: result.stdout, stderr: result.stderr, code: result.code ?? 0 };
+  });
+}
+
 // Clean up temp file
 export async function cleanupTemp(tmpPath: string): Promise<void> {
   await withSSH(async (ssh) => {
