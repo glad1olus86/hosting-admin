@@ -152,7 +152,14 @@ export async function deleteDomain(user: string, domain: string) {
 }
 
 export async function addLetsEncrypt(user: string, domain: string) {
-  return hestiaCommand("v-add-letsencrypt-domain", user, domain);
+  await hestiaCommand("v-add-letsencrypt-domain", user, domain);
+  // Auto-enable HTTP→HTTPS redirect
+  try {
+    await hestiaCommand("v-add-web-domain-ssl-force", user, domain);
+  } catch {
+    // Non-critical, SSL still works without redirect
+  }
+  return { success: true };
 }
 
 // === SYSTEM ===
