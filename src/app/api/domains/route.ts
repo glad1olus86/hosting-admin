@@ -18,8 +18,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { user, domain } = body;
-    await addDomain(user, domain);
+    const { user, domain, ip } = body;
+    await addDomain(user, domain, ip || undefined);
     // SSL is handled separately via PATCH — don't block domain creation
     return NextResponse.json({ success: true });
   } catch (error: any) {

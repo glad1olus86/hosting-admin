@@ -70,9 +70,17 @@ interface HestiaUser {
   username: string;
 }
 
+interface ServerIp {
+  ip: string;
+  name: string;
+  status: string;
+  domains: number;
+}
+
 export default function DomainsPage() {
   const [domains, setDomains] = useState<HestiaDomain[]>([]);
   const [users, setUsers] = useState<HestiaUser[]>([]);
+  const [serverIps, setServerIps] = useState<ServerIp[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,6 +92,7 @@ export default function DomainsPage() {
   const [addForm, setAddForm] = useState({
     user: "",
     domain: "",
+    ip: "",
     ssl: false,
   });
   const [addLoading, setAddLoading] = useState(false);
@@ -128,10 +137,20 @@ export default function DomainsPage() {
     } catch {}
   }, []);
 
+  const fetchIps = useCallback(async () => {
+    try {
+      const res = await fetch("/api/ips");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.error) setServerIps(data);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     fetchDomains();
     fetchUsers();
-  }, [fetchDomains, fetchUsers]);
+    fetchIps();
+  }, [fetchDomains, fetchUsers, fetchIps]);
 
   // Request SSL for a domain (async, non-blocking)
   const requestSsl = useCallback(async (user: string, domain: string) => {
@@ -172,7 +191,7 @@ export default function DomainsPage() {
       const res = await fetch("/api/domains", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: addForm.user, domain: addForm.domain }),
+        body: JSON.stringify({ user: addForm.user, domain: addForm.domain, ip: addForm.ip || undefined }),
       });
       const data = await res.json();
       if (!res.ok || data.error)
@@ -184,7 +203,7 @@ export default function DomainsPage() {
 
       // Close dialog and reset form immediately
       setAddDialogOpen(false);
-      setAddForm({ user: "", domain: "", ssl: false });
+      setAddForm({ user: "", domain: "", ip: "", ssl: false });
 
       // Refresh domains to show the new one
       await fetchDomains();
@@ -477,6 +496,30 @@ export default function DomainsPage() {
                 }
               />
             </div>
+            {serverIps.length > 1 && (
+              <div className="grid gap-2">
+                <Label>IP Address</Label>
+                <Select
+                  value={addForm.ip}
+                  onValueChange={(val) =>
+                    val !== null && setAddForm((f) => ({ ...f, ip: val || "" }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Auto (default)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serverIps.map((s) => (
+                      <SelectItem key={s.ip} value={s.ip}>
+                        <span className="font-mono">{s.ip}</span>
+                        {s.name && <span className="text-muted-foreground ml-2">({s.name})</span>}
+                        <span className="text-muted-foreground ml-1">· {s.domains} domains</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <input
                 id="add-ssl"

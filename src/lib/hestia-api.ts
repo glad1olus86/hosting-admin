@@ -143,7 +143,14 @@ export async function listAllDomains() {
   return allDomains;
 }
 
-export async function addDomain(user: string, domain: string) {
+export async function listSystemIps(): Promise<Record<string, any>> {
+  return hestiaCommand("v-list-sys-ips", "json");
+}
+
+export async function addDomain(user: string, domain: string, ip?: string) {
+  if (ip) {
+    return hestiaCommand("v-add-domain", user, domain, ip);
+  }
   return hestiaCommand("v-add-domain", user, domain);
 }
 
