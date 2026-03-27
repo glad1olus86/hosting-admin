@@ -362,6 +362,11 @@ export async function deleteDirectory(user: string, path: string) {
   return { success: true };
 }
 
+export async function copyFile(user: string, srcPath: string, dstPath: string) {
+  await hestiaActionCommand("v-copy-fs-file", user, srcPath, dstPath);
+  return { success: true };
+}
+
 // === DATABASES ===
 export async function listDatabases(user: string) {
   const data = await hestiaCommand("v-list-databases", user, "json");

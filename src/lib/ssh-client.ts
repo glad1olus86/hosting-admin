@@ -28,25 +28,11 @@ export async function withSSH<T>(fn: (ssh: NodeSSH) => Promise<T>): Promise<T> {
   }
 }
 
-export async function uploadFile(
-  localPath: string,
-  remotePath: string
-): Promise<void> {
-  await withSSH(async (ssh) => {
-    await ssh.putFile(localPath, remotePath);
-  });
-}
+// Upload buffer to /tmp via SFTP, return the temp path
+export async function uploadToTemp(buffer: Buffer, filename: string): Promise<string> {
+  const tmpPath = `/tmp/upload_${Date.now()}_${Math.random().toString(36).slice(2)}_${filename}`;
 
-export async function uploadBuffer(
-  buffer: Buffer,
-  remotePath: string,
-  owner?: string
-): Promise<void> {
   await withSSH(async (ssh) => {
-    // Write buffer to a temp file on the server, then move to target
-    const tmpPath = `/tmp/upload_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-
-    // Use sftp to write directly
     const sftp = await ssh.requestSFTP();
     await new Promise<void>((resolve, reject) => {
       const stream = sftp.createWriteStream(tmpPath);
@@ -54,11 +40,16 @@ export async function uploadBuffer(
       stream.on("error", reject);
       stream.end(buffer);
     });
+    // Make readable by other users so HestiaCP can copy it
+    await ssh.execCommand(`chmod 644 "${tmpPath}"`);
+  });
 
-    // Move to target and set ownership
-    await ssh.execCommand(`mv "${tmpPath}" "${remotePath}"`);
-    if (owner) {
-      await ssh.execCommand(`chown ${owner}:${owner} "${remotePath}"`);
-    }
+  return tmpPath;
+}
+
+// Clean up temp file
+export async function cleanupTemp(tmpPath: string): Promise<void> {
+  await withSSH(async (ssh) => {
+    await ssh.execCommand(`rm -f "${tmpPath}"`);
   });
 }
