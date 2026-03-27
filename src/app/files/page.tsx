@@ -12,6 +12,7 @@ import {
   Eye,
   Home,
   User,
+  Upload,
 } from "lucide-react";
 import { GlassCard } from "@/components/layout/glass-card";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,8 @@ export default function FilesPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<FileEntry | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -189,6 +192,30 @@ export default function FilesPage() {
     }
   };
 
+  const handleUploadFiles = async (fileList: FileList) => {
+    setUploadLoading(true);
+    try {
+      for (const file of Array.from(fileList)) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("user", selectedUser);
+        formData.append("path", currentPath);
+
+        const res = await fetch("/api/files/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+      }
+      await fetchFiles();
+    } catch (err: any) {
+      alert(err.message || "Failed to upload file");
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   const formatSize = (size?: string) => {
     if (!size) return "—";
     const num = parseInt(size, 10);
@@ -256,6 +283,25 @@ export default function FilesPage() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            className="cursor-pointer"
+            disabled={uploadLoading}
+            onClick={() => {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.multiple = true;
+              input.onchange = () => {
+                if (input.files && input.files.length > 0) {
+                  handleUploadFiles(input.files);
+                }
+              };
+              input.click();
+            }}
+          >
+            {uploadLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            Upload
+          </Button>
           <Button className="bg-teal-600 text-white hover:bg-teal-700 cursor-pointer" onClick={() => setMkdirOpen(true)}>
             <FolderPlus className="h-4 w-4" />
             New Folder

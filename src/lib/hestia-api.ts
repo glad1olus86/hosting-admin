@@ -273,6 +273,50 @@ async function hestiaCommandRaw(cmd: string, ...args: string[]): Promise<string>
   return response.text();
 }
 
+// For action commands (create, delete, etc.) — uses returncode=yes for reliable error detection
+async function hestiaActionCommand(cmd: string, ...args: string[]): Promise<void> {
+  const params = new URLSearchParams();
+  params.append("user", HESTIA_USER);
+  params.append("password", HESTIA_PASSWORD);
+  params.append("returncode", "yes");
+  params.append("cmd", cmd);
+  args.forEach((arg, index) => {
+    params.append(`arg${index + 1}`, arg);
+  });
+
+  console.log(`[HestiaAPI] action: ${cmd} args=[${args.join(", ")}]`);
+
+  const response = await fetch(`${HESTIA_HOST}/api/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+    cache: "no-store",
+  });
+
+  const text = await response.text();
+  const code = parseInt(text.trim(), 10);
+
+  console.log(`[HestiaAPI] action: ${cmd} returncode=${code}`);
+
+  if (isNaN(code) || code !== 0) {
+    const errorMessages: Record<number, string> = {
+      1: "Not enough arguments",
+      2: "Object or argument is not valid",
+      3: "Object doesn't exist",
+      4: "Object already exists",
+      5: "Object is suspended",
+      6: "Object is already unsuspended",
+      7: "Object can't be deleted (used by another object)",
+      8: "Hosting package limits exceeded",
+      9: "Wrong password",
+      10: "Permission denied",
+      11: "Subsystem is disabled",
+      12: "Configuration is broken",
+    };
+    throw new Error(errorMessages[code] || `HestiaCP error (code ${code}): ${text.trim().substring(0, 100)}`);
+  }
+}
+
 export async function listDirectory(user: string, path: string = "/") {
   // v-list-fs-directory returns pipe-delimited format:
   // TYPE|PERMISSIONS|DATE|TIME|OWNER|GROUP|SIZE|NAME
@@ -304,15 +348,18 @@ export async function readFile(user: string, path: string) {
 }
 
 export async function createDirectory(user: string, path: string) {
-  return hestiaCommand("v-add-fs-directory", user, path);
+  await hestiaActionCommand("v-add-fs-directory", user, path);
+  return { success: true };
 }
 
 export async function deleteFile(user: string, path: string) {
-  return hestiaCommand("v-delete-fs-file", user, path);
+  await hestiaActionCommand("v-delete-fs-file", user, path);
+  return { success: true };
 }
 
 export async function deleteDirectory(user: string, path: string) {
-  return hestiaCommand("v-delete-fs-directory", user, path);
+  await hestiaActionCommand("v-delete-fs-directory", user, path);
+  return { success: true };
 }
 
 // === DATABASES ===

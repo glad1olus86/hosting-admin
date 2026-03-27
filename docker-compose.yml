@@ -11,5 +11,11 @@ services:
       - HESTIA_USER=SuperAdmin
       - HESTIA_PASSWORD=Afonya_rulit1
       - NODE_TLS_REJECT_UNAUTHORIZED=0
+      - SSH_HOST=host.docker.internal
+      - SSH_PORT=49222
+      - SSH_USER=serveradmin
+      - SSH_KEY_PATH=/keys/id_ed25519
+    volumes:
+      - ./keys:/keys:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
