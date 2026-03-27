@@ -419,11 +419,28 @@ export async function listAllDatabases() {
 }
 
 export async function addDatabase(user: string, dbName: string, dbUser: string, dbPassword: string, type: string = "mysql") {
-  return hestiaCommand("v-add-database", user, dbName, dbUser, dbPassword, type);
+  await hestiaActionCommand("v-add-database", user, dbName, dbUser, dbPassword, type);
+  return { success: true };
 }
 
 export async function deleteDatabase(user: string, dbName: string) {
-  return hestiaCommand("v-delete-database", user, dbName);
+  await hestiaActionCommand("v-delete-database", user, dbName);
+  return { success: true };
+}
+
+export async function changeDatabasePassword(user: string, dbName: string, dbPassword: string) {
+  await hestiaActionCommand("v-change-database-password", user, dbName, dbPassword);
+  return { success: true };
+}
+
+export async function suspendDatabase(user: string, dbName: string) {
+  await hestiaActionCommand("v-suspend-database", user, dbName);
+  return { success: true };
+}
+
+export async function unsuspendDatabase(user: string, dbName: string) {
+  await hestiaActionCommand("v-unsuspend-database", user, dbName);
+  return { success: true };
 }
 
 // === MAIL ===
@@ -553,6 +570,11 @@ export async function listAllDnsDomains() {
   return all;
 }
 
+export async function deleteDnsDomain(user: string, domain: string) {
+  await hestiaActionCommand("v-delete-dns-domain", user, domain);
+  return { success: true };
+}
+
 export async function listDnsRecords(user: string, domain: string) {
   const data = await hestiaCommand("v-list-dns-records", user, domain, "json");
   if (typeof data !== "object" || data === null || Array.isArray(data)) return [];
@@ -616,11 +638,13 @@ export async function listSslCertificates() {
 export async function addLetsEncryptDomain(user: string, domain: string, aliases?: string) {
   const args = [user, domain];
   if (aliases) args.push(aliases);
-  return hestiaCommand("v-add-letsencrypt-domain", ...args);
+  await hestiaActionCommand("v-add-letsencrypt-domain", ...args);
+  return { success: true };
 }
 
 export async function deleteLetsEncryptDomain(user: string, domain: string) {
-  return hestiaCommand("v-delete-letsencrypt-domain", user, domain);
+  await hestiaActionCommand("v-delete-letsencrypt-domain", user, domain);
+  return { success: true };
 }
 
 // === BACKUPS ===
@@ -647,15 +671,57 @@ export async function listAllBackups() {
 }
 
 export async function createBackup(user: string) {
-  return hestiaCommand("v-schedule-user-backup", user);
+  await hestiaActionCommand("v-schedule-user-backup", user);
+  return { success: true };
 }
 
 export async function restoreBackup(user: string, backup: string) {
-  return hestiaCommand("v-schedule-user-restore", user, backup);
+  await hestiaActionCommand("v-schedule-user-restore", user, backup);
+  return { success: true };
 }
 
 export async function deleteBackup(user: string, backup: string) {
-  return hestiaCommand("v-delete-user-backup", user, backup);
+  await hestiaActionCommand("v-delete-user-backup", user, backup);
+  return { success: true };
+}
+
+// === FTP ===
+export async function listAllFtpAccounts() {
+  const users = await listUsers();
+  const allFtp: any[] = [];
+  for (const user of users) {
+    try {
+      const domains = await listDomains(user.username);
+      for (const domain of domains) {
+        const ftpUsers = domain.FTP_USER ? String(domain.FTP_USER).split(":").filter(Boolean) : [];
+        const ftpPaths = domain.FTP_PATH ? String(domain.FTP_PATH).split(":") : [];
+        ftpUsers.forEach((ftpUser: string, index: number) => {
+          allFtp.push({
+            ftpUser,
+            domain: domain.domain,
+            user: user.username,
+            path: ftpPaths[index] || "",
+          });
+        });
+      }
+    } catch {}
+  }
+  return allFtp;
+}
+
+export async function addFtpAccount(user: string, domain: string, ftpUser: string, password: string) {
+  await hestiaActionCommand("v-add-web-domain-ftp", user, domain, ftpUser, password);
+  return { success: true };
+}
+
+export async function deleteFtpAccount(user: string, domain: string, ftpUser: string) {
+  await hestiaActionCommand("v-delete-web-domain-ftp", user, domain, ftpUser);
+  return { success: true };
+}
+
+export async function changeFtpPassword(user: string, domain: string, ftpUser: string, password: string) {
+  await hestiaActionCommand("v-change-web-domain-ftp-password", user, domain, ftpUser, password);
+  return { success: true };
 }
 
 // === DEBUG ===

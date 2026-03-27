@@ -7,6 +7,7 @@ import {
   Globe,
   Loader2,
   Pencil,
+  X,
 } from "lucide-react";
 import { GlassCard } from "@/components/layout/glass-card";
 import { Button } from "@/components/ui/button";
@@ -104,10 +105,15 @@ export default function DnsPage() {
   const [form, setForm] = useState<RecordForm>(emptyForm);
   const [formLoading, setFormLoading] = useState(false);
 
-  // Delete dialog
+  // Delete record dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DnsRecord | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Delete zone dialog
+  const [deleteZoneOpen, setDeleteZoneOpen] = useState(false);
+  const [deleteZoneTarget, setDeleteZoneTarget] = useState<DnsZone | null>(null);
+  const [deleteZoneLoading, setDeleteZoneLoading] = useState(false);
 
   const fetchZones = useCallback(async () => {
     try {
@@ -238,6 +244,30 @@ export default function DnsPage() {
     }
   };
 
+  const handleDeleteZone = async () => {
+    if (!deleteZoneTarget) return;
+    setDeleteZoneLoading(true);
+    try {
+      const res = await fetch(
+        `/api/dns?user=${encodeURIComponent(deleteZoneTarget.user)}&domain=${encodeURIComponent(deleteZoneTarget.domain)}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to delete zone");
+      setDeleteZoneOpen(false);
+      setDeleteZoneTarget(null);
+      if (selectedZone?.domain === deleteZoneTarget.domain) {
+        setSelectedZone(null);
+        setRecords([]);
+      }
+      await fetchZones();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setDeleteZoneLoading(false);
+    }
+  };
+
   const showPriority = form.type === "MX" || form.type === "SRV";
 
   // Filtered records
@@ -281,14 +311,14 @@ export default function DnsPage() {
             {zones.map((zone) => {
               const isSelected = selectedZone?.domain === zone.domain && selectedZone?.user === zone.user;
               return (
-                <button
+                <div
                   key={`${zone.user}-${zone.domain}`}
-                  onClick={() => handleSelectZone(zone)}
-                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all cursor-pointer ${
+                  className={`relative flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all cursor-pointer group ${
                     isSelected
                       ? "border-teal-300 bg-teal-50/80 shadow-md"
                       : "border-white/30 bg-white/40 hover:bg-white/60 hover:shadow-md"
                   }`}
+                  onClick={() => handleSelectZone(zone)}
                 >
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${isSelected ? "bg-teal-200" : "bg-teal-100"}`}>
                     <Globe className="h-5 w-5 text-teal-600" />
@@ -300,7 +330,18 @@ export default function DnsPage() {
                       <Badge className="bg-violet-100 text-violet-700 border-violet-200 text-[10px] px-1.5 py-0">{zone.RECORDS} records</Badge>
                     </div>
                   </div>
-                </button>
+                  <button
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-red-100 cursor-pointer"
+                    title="Удалить DNS-зону"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteZoneTarget(zone);
+                      setDeleteZoneOpen(true);
+                    }}
+                  >
+                    <X className="h-4 w-4 text-red-500" />
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -467,20 +508,41 @@ export default function DnsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Delete Record Confirmation */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete DNS Record</DialogTitle>
+            <DialogTitle>Удалить DNS-запись</DialogTitle>
             <DialogDescription>
-              Delete <strong>{deleteTarget?.TYPE}</strong> record <strong>{deleteTarget?.RECORD}</strong> → <code className="text-xs">{deleteTarget?.VALUE}</code>? This cannot be undone.
+              Удалить запись <strong>{deleteTarget?.TYPE}</strong> <strong>{deleteTarget?.RECORD}</strong> → <code className="text-xs">{deleteTarget?.VALUE}</code>? Это действие необратимо.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>Отмена</DialogClose>
             <Button variant="destructive" className="cursor-pointer" onClick={handleDelete} disabled={deleteLoading}>
               {deleteLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Delete
+              Удалить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Zone Confirmation */}
+      <Dialog open={deleteZoneOpen} onOpenChange={setDeleteZoneOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Удалить DNS-зону</DialogTitle>
+            <DialogDescription>
+              Вы уверены, что хотите удалить DNS-зону{" "}
+              <strong className="text-red-600">{deleteZoneTarget?.domain}</strong>?
+              Все DNS-записи этой зоны будут удалены безвозвратно.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Отмена</DialogClose>
+            <Button variant="destructive" className="cursor-pointer" onClick={handleDeleteZone} disabled={deleteZoneLoading}>
+              {deleteZoneLoading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+              Удалить зону
             </Button>
           </DialogFooter>
         </DialogContent>

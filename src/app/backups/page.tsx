@@ -1,18 +1,24 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Trash2, RefreshCw, Archive, Loader2, Download } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  RefreshCw,
+  Archive,
+  Loader2,
+  HardDrive,
+  User,
+  Globe,
+  Database,
+  Mail,
+  Clock,
+  FolderArchive,
+  Calendar,
+} from "lucide-react";
 import { GlassCard } from "@/components/layout/glass-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -33,35 +39,45 @@ import {
 interface Backup {
   filename: string;
   user: string;
+  TYPE: string;
   SIZE: string;
-  DATE: string;
-  TIME: string;
-  RUNTIME: string;
   WEB: string;
+  DNS: string;
   MAIL: string;
   DB: string;
   CRON: string;
   UDIR: string;
+  RUNTIME: string;
+  TIME: string;
+  DATE: string;
 }
 
-interface User {
+interface HestiaUser {
   username: string;
 }
 
 function formatSize(sizeMb: string): string {
   const num = parseInt(sizeMb, 10);
   if (isNaN(num)) return sizeMb;
-  if (num > 1024) {
-    return `${(num / 1024).toFixed(1)} GB`;
-  }
+  if (num >= 1024) return `${(num / 1024).toFixed(1)} GB`;
   return `${num} MB`;
+}
+
+function hasContent(field: string): boolean {
+  return !!field && field.trim().length > 0;
+}
+
+function countItems(field: string): number {
+  if (!field || !field.trim()) return 0;
+  return field.split(",").length;
 }
 
 export default function BackupsPage() {
   const [backups, setBackups] = useState<Backup[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<HestiaUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filterUser, setFilterUser] = useState<string>("all");
 
   // Create backup dialog
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -87,7 +103,7 @@ export default function BackupsPage() {
       if (data.error) throw new Error(data.error);
       setBackups(data);
     } catch (err: any) {
-      setError(err.message || "Failed to fetch backups");
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -99,9 +115,7 @@ export default function BackupsPage() {
       if (!res.ok) return;
       const data = await res.json();
       if (!data.error) setUsers(data);
-    } catch {
-      // Non-critical, silently fail
-    }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -124,7 +138,7 @@ export default function BackupsPage() {
       setCreateUser("");
       await fetchBackups();
     } catch (err: any) {
-      alert(err.message || "Failed to schedule backup");
+      setError(err.message);
     } finally {
       setCreateLoading(false);
     }
@@ -137,18 +151,15 @@ export default function BackupsPage() {
       const res = await fetch("/api/backups", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user: restoreTarget.user,
-          backup: restoreTarget.filename,
-        }),
+        body: JSON.stringify({ user: restoreTarget.user, backup: restoreTarget.filename }),
       });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || "Failed to restore backup");
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to restore");
       setRestoreDialogOpen(false);
       setRestoreTarget(null);
       await fetchBackups();
     } catch (err: any) {
-      alert(err.message || "Failed to restore backup");
+      setError(err.message);
     } finally {
       setRestoreLoading(false);
     }
@@ -163,136 +174,263 @@ export default function BackupsPage() {
         { method: "DELETE" }
       );
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || "Failed to delete backup");
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to delete");
       setDeleteDialogOpen(false);
       setDeleteTarget(null);
       await fetchBackups();
     } catch (err: any) {
-      alert(err.message || "Failed to delete backup");
+      setError(err.message);
     } finally {
       setDeleteLoading(false);
     }
   };
 
+  const filtered = backups.filter((b) => filterUser === "all" || b.user === filterUser);
+  const totalSize = backups.reduce((sum, b) => sum + parseInt(b.SIZE || "0", 10), 0);
+  const uniqueUsers = [...new Set(backups.map((b) => b.user))];
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[#134E4A]">Backups</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-[#134E4A]">Backups</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage server backups and restore points
+          </p>
+        </div>
         <Button
           className="bg-teal-600 text-white hover:bg-teal-700 cursor-pointer"
           onClick={() => setCreateDialogOpen(true)}
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4 mr-1" />
           Create Backup
         </Button>
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <GlassCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
+              <Archive className="w-5 h-5 text-teal-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[#134E4A]">{backups.length}</p>
+              <p className="text-xs text-muted-foreground">Total Backups</p>
+            </div>
+          </div>
+        </GlassCard>
+        <GlassCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+              <HardDrive className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[#134E4A]">{formatSize(String(totalSize))}</p>
+              <p className="text-xs text-muted-foreground">Total Size</p>
+            </div>
+          </div>
+        </GlassCard>
+        <GlassCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
+              <User className="w-5 h-5 text-violet-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[#134E4A]">{uniqueUsers.length}</p>
+              <p className="text-xs text-muted-foreground">Users</p>
+            </div>
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* Filter */}
+      {uniqueUsers.length > 1 && (
+        <div className="flex gap-2">
+          {[{ key: "all", label: "All" }, ...uniqueUsers.map((u) => ({ key: u, label: u }))].map(
+            (f) => (
+              <button
+                key={f.key}
+                onClick={() => setFilterUser(f.key)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                  filterUser === f.key
+                    ? "bg-teal-600 text-white shadow-sm"
+                    : "bg-white/60 text-slate-600 hover:bg-white/80 border border-slate-200"
+                }`}
+              >
+                {f.label}
+              </button>
+            )
+          )}
+        </div>
+      )}
+
+      {/* Error */}
       {error && (
-        <GlassCard className="border-red-200 bg-red-50/70">
-          <p className="text-sm text-red-600">{error}</p>
+        <GlassCard className="border-red-200 bg-red-50/70 p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-red-600">{error}</p>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-xs cursor-pointer">
+              Close
+            </button>
+          </div>
         </GlassCard>
       )}
 
-      <GlassCard>
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
+      {/* Content */}
+      {loading ? (
+        <GlassCard className="p-12">
+          <div className="flex items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
             <span className="ml-2 text-sm text-muted-foreground">Loading backups...</span>
           </div>
-        ) : backups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 space-y-4">
+        </GlassCard>
+      ) : filtered.length === 0 ? (
+        <GlassCard className="p-16">
+          <div className="flex flex-col items-center justify-center space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-teal-100 flex items-center justify-center">
               <Archive className="w-8 h-8 text-teal-600" />
             </div>
-            <p className="text-sm text-muted-foreground">No backups found</p>
+            <h2 className="text-xl font-semibold text-[#134E4A]">
+              {backups.length === 0 ? "No backups yet" : "No backups match filter"}
+            </h2>
+            <p className="text-muted-foreground text-center">
+              {backups.length === 0
+                ? "Create your first backup to protect your data."
+                : "Try selecting a different user."}
+            </p>
           </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Filename</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead>Runtime</TableHead>
-                <TableHead>Includes</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {backups.map((backup) => (
-                <TableRow key={`${backup.user}-${backup.filename}`}>
-                  <TableCell className="font-medium text-[#134E4A]">
-                    {backup.filename}
-                  </TableCell>
-                  <TableCell>{backup.user}</TableCell>
-                  <TableCell>{formatSize(backup.SIZE)}</TableCell>
-                  <TableCell>{backup.DATE}</TableCell>
-                  <TableCell>{backup.TIME}</TableCell>
-                  <TableCell>{backup.RUNTIME}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {backup.WEB === "yes" && (
-                        <Badge className="bg-teal-100 text-teal-700 border-teal-200">
-                          Web
-                        </Badge>
-                      )}
-                      {backup.MAIL === "yes" && (
-                        <Badge className="bg-violet-100 text-violet-700 border-violet-200">
-                          Mail
-                        </Badge>
-                      )}
-                      {backup.DB === "yes" && (
-                        <Badge className="bg-amber-100 text-amber-700 border-amber-200">
-                          DB
-                        </Badge>
-                      )}
-                      {backup.CRON === "yes" && (
-                        <Badge className="bg-slate-100 text-slate-700 border-slate-200">
-                          Cron
-                        </Badge>
-                      )}
-                      {backup.UDIR === "yes" && (
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                          Dir
-                        </Badge>
-                      )}
+        </GlassCard>
+      ) : (
+        <div className="grid gap-4">
+          {filtered.map((backup) => {
+            const webDomains = hasContent(backup.WEB) ? backup.WEB.split(",") : [];
+            const mailDomains = hasContent(backup.MAIL) ? backup.MAIL.split(",") : [];
+            const dbList = hasContent(backup.DB) ? backup.DB.split(",") : [];
+            const dnsDomains = hasContent(backup.DNS) ? backup.DNS.split(",") : [];
+
+            return (
+              <GlassCard
+                key={`${backup.user}-${backup.filename}`}
+                className="p-5 transition-all hover:shadow-md"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                  {/* Left: Icon + Info */}
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    <div className="w-12 h-12 rounded-xl bg-teal-100 flex items-center justify-center shrink-0">
+                      <FolderArchive className="w-6 h-6 text-teal-600" />
                     </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="cursor-pointer text-teal-600 border-teal-300 hover:bg-teal-50"
-                        onClick={() => {
-                          setRestoreTarget(backup);
-                          setRestoreDialogOpen(true);
-                        }}
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                        Restore
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50"
-                        onClick={() => {
-                          setDeleteTarget(backup);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-[#134E4A] text-sm truncate">
+                          {backup.filename}
+                        </h3>
+                        <Badge className="bg-slate-100 text-slate-600 border-slate-200 text-[10px]">
+                          {backup.TYPE}
+                        </Badge>
+                      </div>
+
+                      {/* Meta row */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <User className="w-3.5 h-3.5" />
+                          {backup.user}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <HardDrive className="w-3.5 h-3.5" />
+                          {formatSize(backup.SIZE)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {backup.DATE}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          {backup.TIME}
+                        </span>
+                        {backup.RUNTIME && (
+                          <span className="text-xs text-slate-400">
+                            {backup.RUNTIME} min
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Includes badges */}
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {webDomains.length > 0 && (
+                          <Badge className="bg-teal-100 text-teal-700 border-teal-200 text-[11px]">
+                            <Globe className="w-3 h-3 mr-1" />
+                            Web ({webDomains.length})
+                          </Badge>
+                        )}
+                        {dnsDomains.length > 0 && (
+                          <Badge className="bg-cyan-100 text-cyan-700 border-cyan-200 text-[11px]">
+                            <Globe className="w-3 h-3 mr-1" />
+                            DNS ({dnsDomains.length})
+                          </Badge>
+                        )}
+                        {mailDomains.length > 0 && (
+                          <Badge className="bg-violet-100 text-violet-700 border-violet-200 text-[11px]">
+                            <Mail className="w-3 h-3 mr-1" />
+                            Mail ({mailDomains.length})
+                          </Badge>
+                        )}
+                        {dbList.length > 0 && (
+                          <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[11px]">
+                            <Database className="w-3 h-3 mr-1" />
+                            DB ({dbList.length})
+                          </Badge>
+                        )}
+                        {hasContent(backup.CRON) && (
+                          <Badge className="bg-slate-100 text-slate-600 border-slate-200 text-[11px]">
+                            <Clock className="w-3 h-3 mr-1" />
+                            Cron
+                          </Badge>
+                        )}
+                        {hasContent(backup.UDIR) && (
+                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[11px]">
+                            <FolderArchive className="w-3 h-3 mr-1" />
+                            User Dir
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </GlassCard>
+                  </div>
+
+                  {/* Right: Actions */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="cursor-pointer border-teal-300 text-teal-700 hover:bg-teal-50 h-8"
+                      onClick={() => {
+                        setRestoreTarget(backup);
+                        setRestoreDialogOpen(true);
+                      }}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      Restore
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="cursor-pointer h-8 px-2"
+                      title="Delete backup"
+                      onClick={() => {
+                        setDeleteTarget(backup);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
+              </GlassCard>
+            );
+          })}
+        </div>
+      )}
 
       {/* Create Backup Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -300,22 +438,19 @@ export default function BackupsPage() {
           <DialogHeader>
             <DialogTitle>Create Backup</DialogTitle>
             <DialogDescription>
-              Schedule a new backup for a user. The backup will be created in the background.
+              Schedule a new backup. It will be created in the background.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
               <label className="text-sm font-medium text-[#134E4A]">User</label>
-              <Select
-                value={createUser}
-                onValueChange={(val) => setCreateUser(val as string)}
-              >
-                <SelectTrigger className="w-full">
+              <Select value={createUser} onValueChange={(val) => setCreateUser(val || "")}>
+                <SelectTrigger className="w-full cursor-pointer">
                   <SelectValue placeholder="Select a user" />
                 </SelectTrigger>
                 <SelectContent>
                   {users.map((u) => (
-                    <SelectItem key={u.username} value={u.username}>
+                    <SelectItem key={u.username} value={u.username} className="cursor-pointer">
                       {u.username}
                     </SelectItem>
                   ))}
@@ -324,7 +459,7 @@ export default function BackupsPage() {
             </div>
           </div>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" className="cursor-pointer" />}>
+            <DialogClose render={<Button variant="outline" />}>
               Cancel
             </DialogClose>
             <Button
@@ -332,7 +467,7 @@ export default function BackupsPage() {
               onClick={handleCreateBackup}
               disabled={createLoading || !createUser}
             >
-              {createLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {createLoading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               Create Backup
             </Button>
           </DialogFooter>
@@ -345,13 +480,13 @@ export default function BackupsPage() {
           <DialogHeader>
             <DialogTitle>Restore Backup</DialogTitle>
             <DialogDescription>
-              This will restore user <strong>{restoreTarget?.user}</strong> data from
-              backup <strong>{restoreTarget?.filename}</strong>. Current data may be
-              overwritten.
+              Restore user <strong>{restoreTarget?.user}</strong> from backup{" "}
+              <strong>{restoreTarget?.filename}</strong>?
+              Current data may be overwritten. The restore will run in the background.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" className="cursor-pointer" />}>
+            <DialogClose render={<Button variant="outline" />}>
               Cancel
             </DialogClose>
             <Button
@@ -359,7 +494,7 @@ export default function BackupsPage() {
               onClick={handleRestore}
               disabled={restoreLoading}
             >
-              {restoreLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {restoreLoading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               Restore
             </Button>
           </DialogFooter>
@@ -373,12 +508,12 @@ export default function BackupsPage() {
             <DialogTitle>Delete Backup</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete backup{" "}
-              <strong>{deleteTarget?.filename}</strong> for user{" "}
-              <strong>{deleteTarget?.user}</strong>? This action cannot be undone.
+              <strong className="text-red-600">{deleteTarget?.filename}</strong>?
+              This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" className="cursor-pointer" />}>
+            <DialogClose render={<Button variant="outline" />}>
               Cancel
             </DialogClose>
             <Button
@@ -387,7 +522,7 @@ export default function BackupsPage() {
               onClick={handleDelete}
               disabled={deleteLoading}
             >
-              {deleteLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {deleteLoading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               Delete
             </Button>
           </DialogFooter>

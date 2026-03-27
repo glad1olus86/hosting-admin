@@ -12,6 +12,7 @@ import {
   Waypoints,
   ShieldCheck,
   HardDrive,
+  Upload,
   Server,
   Settings,
 } from "lucide-react";
@@ -41,6 +42,7 @@ const navGroups: NavGroup[] = [
       { label: "DNS", href: "/dns", icon: Waypoints },
       { label: "SSL", href: "/ssl", icon: ShieldCheck },
       { label: "Backups", href: "/backups", icon: HardDrive },
+      { label: "FTP", href: "/ftp", icon: Upload },
     ],
   },
   {
