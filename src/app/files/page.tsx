@@ -107,7 +107,7 @@ export default function FilesPage() {
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   useEffect(() => {
-    if (selectedUser) setCurrentPath(`/home/${selectedUser}`);
+    if (selectedUser) setCurrentPath(`/home/${selectedUser}/web`);
   }, [selectedUser]);
 
   useEffect(() => {
@@ -119,10 +119,12 @@ export default function FilesPage() {
   };
 
   const navigateUp = () => {
+    const basePath = `/home/${selectedUser}/web`;
+    if (currentPath === basePath) return;
     const parts = currentPath.split("/").filter(Boolean);
-    if (parts.length <= 1) { setCurrentPath("/"); return; }
     parts.pop();
-    setCurrentPath("/" + parts.join("/"));
+    const newPath = "/" + parts.join("/");
+    setCurrentPath(newPath.length >= basePath.length ? newPath : basePath);
   };
 
   const breadcrumbs = currentPath.split("/").filter(Boolean).map((part, i, arr) => ({
@@ -313,20 +315,20 @@ export default function FilesPage() {
       <GlassCard className="!py-3">
         <div className="flex items-center gap-1 text-sm overflow-x-auto">
           <button
-            onClick={() => setCurrentPath(`/home/${selectedUser}`)}
+            onClick={() => setCurrentPath(`/home/${selectedUser}/web`)}
             className="flex items-center gap-1 text-teal-600 hover:text-teal-800 cursor-pointer shrink-0"
           >
             <Home className="h-4 w-4" />
-            home
+            web
           </button>
-          {breadcrumbs.slice(1).map((crumb, i) => (
+          {breadcrumbs.slice(3).map((crumb, i, arr) => (
             <span key={crumb.path} className="flex items-center gap-1 shrink-0">
               <ChevronRight className="h-3 w-3 text-muted-foreground" />
               <button
                 onClick={() => setCurrentPath(crumb.path)}
                 className={cn(
                   "hover:text-teal-600 cursor-pointer",
-                  i === breadcrumbs.length - 2 ? "font-medium text-[#134E4A]" : "text-muted-foreground"
+                  i === arr.length - 1 ? "font-medium text-[#134E4A]" : "text-muted-foreground"
                 )}
               >
                 {crumb.name}
@@ -351,7 +353,7 @@ export default function FilesPage() {
           </div>
         ) : (
           <div className="space-y-0.5">
-            {currentPath !== "/" && currentPath !== `/home/${selectedUser}` && (
+            {currentPath !== `/home/${selectedUser}/web` && (
               <button
                 onClick={navigateUp}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-white/50 cursor-pointer"
