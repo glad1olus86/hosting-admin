@@ -95,6 +95,20 @@ export default function DashboardPage() {
     return `${mb} MB`;
   };
 
+  const formatUptime = (uptime: string) => {
+    // If it's a number (seconds), format it
+    const sec = parseInt(uptime, 10);
+    if (!isNaN(sec) && String(sec) === uptime.trim()) {
+      const days = Math.floor(sec / 86400);
+      const hours = Math.floor((sec % 86400) / 3600);
+      const mins = Math.floor((sec % 3600) / 60);
+      if (days > 0) return `${days}d ${hours}h ${mins}m`;
+      if (hours > 0) return `${hours}h ${mins}m`;
+      return `${mins}m`;
+    }
+    return uptime;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -177,7 +191,7 @@ export default function DashboardPage() {
         <KpiCard
           title="CPU"
           value={stats?.loadAvg ? stats.loadAvg.split(" ")[0] : "N/A"}
-          subtitle={`${stats?.cpuCount ?? 0} cores · ${stats?.uptime ?? ""}`}
+          subtitle={`${stats?.cpuCount ?? 0} cores · ${stats?.uptime ? formatUptime(stats.uptime) : ""}`}
           icon={<Cpu className="h-6 w-6" />}
           color="emerald"
         />
@@ -197,7 +211,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <span className="text-muted-foreground">Uptime: </span>
-              <span className="font-medium text-[#134E4A]">{stats.uptime}</span>
+              <span className="font-medium text-[#134E4A]">{formatUptime(stats.uptime)}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Load: </span>

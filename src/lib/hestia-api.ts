@@ -211,7 +211,7 @@ export async function getSystemStats() {
     const info = sys.sysinfo || sys;
     hostname = info.HOSTNAME || "";
     os = info.OS || "";
-    cpuCount = parseInt(info.CPU_COUNT || "0", 10);
+    cpuCount = parseInt(info.CPU_CORES || info.CPU_COUNT || "0", 10);
     uptime = info.UPTIME || "";
     loadAvg = info.LOADAVERAGE || "";
   }

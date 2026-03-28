@@ -149,7 +149,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/debug");
       const data = await res.json();
       setConnectionInfo(data);
-      setConnectionStatus(data.connected ? "ok" : "error");
+      setConnectionStatus(data.ok ? "ok" : "error");
     } catch {
       setConnectionStatus("error");
     }

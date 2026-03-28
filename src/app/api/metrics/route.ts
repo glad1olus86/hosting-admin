@@ -2,34 +2,23 @@ import { NextResponse } from "next/server";
 import { requireAdmin, isNextResponse } from "@/lib/auth-guard";
 import { withSSH } from "@/lib/ssh-client";
 
-const SSH_SUDO_PASSWORD = process.env.SSH_SUDO_PASSWORD || "";
-
 export async function GET() {
   const auth = await requireAdmin();
   if (isNextResponse(auth)) return auth;
 
   try {
+    // All commands in one SSH call — none require root privileges
+    const script = [
+      "cat /proc/stat | head -1",
+      "free -m | awk '/Mem:/ {printf \"%d %d %d\", $2, $3, $4}'",
+      "df / | awk 'NR==2 {printf \"%s %s %s %s\", $2, $3, $4, $5}'",
+      "cat /proc/net/dev | awk '/:/ && !/lo:/ {gsub(/:/, \"\"); printf \"%s %s %s\\n\", $1, $2, $10}'",
+      "ps aux --sort=-%cpu | awk 'NR>1 && NR<=11 {printf \"%s|%s|%s|%s|\", $1, $2, $3, $4; for(i=11;i<=NF;i++) printf \"%s \", $i; print \"\"}'",
+      "cat /proc/loadavg | awk '{printf \"%s %s %s\", $1, $2, $3}'",
+      "cat /proc/uptime | awk '{printf \"%d\", $1}'",
+    ].join(" && echo '---SEPARATOR---' && ");
+
     const metrics = await withSSH(async (ssh) => {
-      const sudoPrefix = `echo '${SSH_SUDO_PASSWORD.replace(/'/g, "'\\''")}' | sudo -S`;
-
-      // All commands in one SSH call for performance
-      const script = [
-        // 1. CPU usage
-        `${sudoPrefix} cat /proc/stat 2>/dev/null | head -1`,
-        // 2. RAM
-        `free -m | awk '/Mem:/ {printf "%d %d %d", $2, $3, $4}'`,
-        // 3. Disk
-        `df / | awk 'NR==2 {printf "%s %s %s %s", $2, $3, $4, $5}'`,
-        // 4. Network
-        `cat /proc/net/dev | awk '/:/ && !/lo:/ {gsub(/:/, ""); printf "%s %s %s\\n", $1, $2, $10}'`,
-        // 5. Top processes
-        `ps aux --sort=-%cpu | awk 'NR>1 && NR<=11 {printf "%s|%s|%s|%s|", $1, $2, $3, $4; for(i=11;i<=NF;i++) printf "%s ", $i; print ""}'`,
-        // 6. Load average
-        `cat /proc/loadavg | awk '{printf "%s %s %s", $1, $2, $3}'`,
-        // 7. Uptime in seconds
-        `cat /proc/uptime | awk '{printf "%d", $1}'`,
-      ].join(" && echo '---SEPARATOR---' && ");
-
       const result = await ssh.execCommand(script);
       return result.stdout;
     });
