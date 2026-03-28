@@ -70,6 +70,13 @@ export async function hestiaCommand(cmd: string, ...args: string[]): Promise<any
       throw new Error(errorMessages[code] || `HestiaCP error code: ${code}`);
     }
 
+    // Detect "Error: ..." responses from HestiaCP
+    if (/^Error:/im.test(trimmed)) {
+      const errorMsg = trimmed.replace(/^Error:\s*/i, "").trim();
+      console.error(`[HestiaAPI] ${cmd} error: "${errorMsg}"`);
+      throw new Error(errorMsg);
+    }
+
     // Some commands return plain text success messages like "OK", "Done", etc.
     // If HTTP was 200 and text is short, treat as success
     if (trimmed.length < 100 && response.ok) {
@@ -148,10 +155,20 @@ export async function listSystemIps(): Promise<Record<string, any>> {
 }
 
 export async function addDomain(user: string, domain: string, ip?: string) {
-  if (ip) {
-    return hestiaCommand("v-add-domain", user, domain, ip);
+  try {
+    if (ip) {
+      return await hestiaCommand("v-add-domain", user, domain, ip);
+    }
+    return await hestiaCommand("v-add-domain", user, domain);
+  } catch (err: any) {
+    // v-add-domain creates web+mail+dns. If web succeeded but mail already exists,
+    // HestiaCP returns "Error: Mail domain exists" — this is non-critical
+    if (err.message && /mail domain/i.test(err.message)) {
+      console.log(`[HestiaAPI] addDomain: mail warning ignored: ${err.message}`);
+      return { success: true, warning: err.message };
+    }
+    throw err;
   }
-  return hestiaCommand("v-add-domain", user, domain);
 }
 
 export async function deleteDomain(user: string, domain: string) {
