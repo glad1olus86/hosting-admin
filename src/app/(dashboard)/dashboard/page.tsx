@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Users,
   Globe,
@@ -29,10 +29,20 @@ interface Stats {
   packages: number;
 }
 
+interface MetricsPoint {
+  time: string;
+  cpu: number;
+  ram: number;
+}
+
+const MAX_CHART_POINTS = 30;
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chartData, setChartData] = useState<MetricsPoint[]>([]);
+  const metricsInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -48,12 +58,37 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const res = await fetch("/api/metrics");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.error) return;
+
+      const now = new Date();
+      const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+
+      setChartData((prev) => {
+        const next = [...prev, { time: timeStr, cpu: data.cpu, ram: data.ram.percent }];
+        return next.length > MAX_CHART_POINTS ? next.slice(-MAX_CHART_POINTS) : next;
+      });
+    } catch {
+      // Non-critical
+    }
+  }, []);
+
   useEffect(() => {
     fetchStats();
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
-  }, [fetchStats]);
+    fetchMetrics();
+
+    const statsInterval = setInterval(fetchStats, 30000);
+    metricsInterval.current = setInterval(fetchMetrics, 10000);
+
+    return () => {
+      clearInterval(statsInterval);
+      if (metricsInterval.current) clearInterval(metricsInterval.current);
+    };
+  }, [fetchStats, fetchMetrics]);
 
   const formatDisk = (mb: number) => {
     if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
@@ -172,7 +207,10 @@ export default function DashboardPage() {
         </GlassCard>
       )}
 
-      {/* Service Status - now from API */}
+      {/* Live CPU & RAM Chart */}
+      <CpuChart data={chartData} />
+
+      {/* Service Status */}
       <ServiceStatus />
     </div>
   );

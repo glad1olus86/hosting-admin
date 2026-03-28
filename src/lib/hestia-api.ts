@@ -2,7 +2,7 @@ const HESTIA_HOST = process.env.HESTIA_HOST || "https://localhost:8083";
 const HESTIA_USER = process.env.HESTIA_USER || "admin";
 const HESTIA_PASSWORD = process.env.HESTIA_PASSWORD || "";
 
-async function hestiaCommand(cmd: string, ...args: string[]): Promise<any> {
+export async function hestiaCommand(cmd: string, ...args: string[]): Promise<any> {
   const params = new URLSearchParams();
   params.append("user", HESTIA_USER);
   params.append("password", HESTIA_PASSWORD);
@@ -303,7 +303,7 @@ async function hestiaCommandBuffer(cmd: string, ...args: string[]): Promise<Arra
 }
 
 // For action commands (create, delete, etc.) — uses returncode=yes for reliable error detection
-async function hestiaActionCommand(cmd: string, ...args: string[]): Promise<void> {
+export async function hestiaActionCommand(cmd: string, ...args: string[]): Promise<void> {
   const params = new URLSearchParams();
   params.append("user", HESTIA_USER);
   params.append("password", HESTIA_PASSWORD);
