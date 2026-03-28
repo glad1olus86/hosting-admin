@@ -24,7 +24,7 @@ interface CpuChartProps {
 }
 
 function formatTick(time: string, period?: string) {
-  if (!period || period === "live") return time;
+  if (!period || period === "live") return time ? time.slice(0, 5) : time;
   try {
     const d = new Date(time);
     if (isNaN(d.getTime())) return time;

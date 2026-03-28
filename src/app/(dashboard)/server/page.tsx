@@ -160,7 +160,7 @@ export default function ServerPage() {
       setError(null);
 
       const now = new Date();
-      const timeStr = `${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+      const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
 
       setCpuHistory((prev) => {
         const next = [
@@ -251,7 +251,7 @@ export default function ServerPage() {
         const cpuSeeded: ChartPoint[] = data.points.map((pt: any) => {
           const d = new Date(pt.time);
           return {
-            time: `${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")}`,
+            time: `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")}`,
             cpu: pt.cpu,
             ram: pt.ram,
           };
@@ -262,16 +262,12 @@ export default function ServerPage() {
         const netSeeded: NetChartPoint[] = [];
         for (let i = 1; i < data.points.length; i++) {
           const pt = data.points[i];
-          const prev = data.points[i - 1];
           const d = new Date(pt.time);
-          const timeDelta = (new Date(pt.time).getTime() - new Date(prev.time).getTime()) / 1000;
-          if (timeDelta > 0) {
-            netSeeded.push({
-              time: `${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")}`,
-              in: Math.max(0, Math.round((pt.netInRate || 0))),
-              out: Math.max(0, Math.round((pt.netOutRate || 0))),
-            });
-          }
+          netSeeded.push({
+            time: `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")}`,
+            in: Math.max(0, Math.round((pt.netInRate || 0))),
+            out: Math.max(0, Math.round((pt.netOutRate || 0))),
+          });
         }
         if (netSeeded.length > 0) setNetHistory(netSeeded);
       }
@@ -632,7 +628,7 @@ export default function ServerPage() {
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v) => {
-                      if (period === "live") return v;
+                      if (period === "live") return v ? v.slice(0, 5) : v;
                       try { const d = new Date(v); return isNaN(d.getTime()) ? v : period === "7d" ? `${d.getDate()}/${d.getMonth()+1}` : `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`; } catch { return v; }
                     }}
                     interval="preserveStartEnd"
@@ -735,7 +731,7 @@ export default function ServerPage() {
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v) => {
-                      if (period === "live") return v;
+                      if (period === "live") return v ? v.slice(0, 5) : v;
                       try { const d = new Date(v); return isNaN(d.getTime()) ? v : period === "7d" ? `${d.getDate()}/${d.getMonth()+1}` : `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`; } catch { return v; }
                     }}
                     interval="preserveStartEnd"
