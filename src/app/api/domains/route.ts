@@ -7,13 +7,16 @@ import {
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
 
+const HIDDEN_DOMAINS = ["host.lamapixel.com", "system.lamapixel.com"];
+
 export async function GET() {
   const auth = await requireAuth();
   if (isNextResponse(auth)) return auth;
 
   try {
     const domains = await listAllDomains();
-    return NextResponse.json(filterByUser(domains, auth.allowedUsernames));
+    const visible = domains.filter((d: any) => !HIDDEN_DOMAINS.includes(d.domain));
+    return NextResponse.json(filterByUser(visible, auth.allowedUsernames));
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -49,6 +52,9 @@ export async function PATCH(request: NextRequest) {
     if (!canAccessUser(auth.allowedUsernames, user)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    if (HIDDEN_DOMAINS.includes(domain)) {
+      return NextResponse.json({ error: "This domain is protected" }, { status: 403 });
+    }
     await addLetsEncrypt(user, domain);
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -66,6 +72,9 @@ export async function DELETE(request: NextRequest) {
     const domain = searchParams.get("domain");
     if (!user || !domain)
       return NextResponse.json({ error: "User and domain required" }, { status: 400 });
+    if (HIDDEN_DOMAINS.includes(domain)) {
+      return NextResponse.json({ error: "This domain is protected" }, { status: 403 });
+    }
     if (!canAccessUser(auth.allowedUsernames, user)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

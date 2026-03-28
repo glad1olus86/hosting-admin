@@ -17,6 +17,8 @@ import {
   addLetsEncrypt,
 } from "@/lib/hestia-api";
 
+const HIDDEN_DOMAINS = ["host.lamapixel.com", "system.lamapixel.com"];
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ domain: string }> }
@@ -25,6 +27,11 @@ export async function GET(
   if (isNextResponse(auth)) return auth;
 
   const { domain } = await params;
+
+  if (HIDDEN_DOMAINS.includes(domain)) {
+    return NextResponse.json({ error: "This domain is protected" }, { status: 403 });
+  }
+
   const { searchParams } = new URL(request.url);
   const user = searchParams.get("user");
 
@@ -68,6 +75,10 @@ export async function PATCH(
   if (isNextResponse(auth)) return auth;
 
   const { domain } = await params;
+
+  if (HIDDEN_DOMAINS.includes(domain)) {
+    return NextResponse.json({ error: "This domain is protected" }, { status: 403 });
+  }
 
   try {
     const body = await request.json();
