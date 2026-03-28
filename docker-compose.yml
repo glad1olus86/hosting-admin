@@ -16,6 +16,8 @@ services:
       - SSH_USER=serveradmin
       - SSH_KEY_PATH=/keys/id_ed25519
       - SSH_SUDO_PASSWORD=Afonya~rulit123
+      - DATABASE_URL=mysql://panel_admin:ngPwtNE9hwuddiqxcWtocJgGRa%2FNsv2Y@host.docker.internal:3306/hostpanel_auth
+      - JWT_SECRET=pp/olThpm823IBxkIB0hHssHO6XI++dZSXCf1Y/9FBU=
     volumes:
       - ./keys:/keys:ro
     extra_hosts:

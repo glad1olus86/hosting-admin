@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/auth-context";
 
 function formatSegment(segment: string): string {
   return segment
@@ -19,8 +20,12 @@ function formatSegment(segment: string): string {
 
 export function Navbar() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   const segments = pathname.split("/").filter(Boolean);
+  const initials = user?.username
+    ? user.username.slice(0, 2).toUpperCase()
+    : "..";
 
   return (
     <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-white/20 bg-white/50 backdrop-blur-lg px-6">
@@ -69,10 +74,12 @@ export function Navbar() {
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition-colors hover:bg-teal-50 outline-none cursor-pointer">
             <Avatar size="sm">
-              <AvatarImage src="/avatar.png" alt="Admin" />
-              <AvatarFallback>AD</AvatarFallback>
+              <AvatarImage src="/avatar.png" alt={user?.username || ""} />
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
-            <span className="text-sm font-medium text-foreground">Admin</span>
+            <span className="text-sm font-medium text-foreground">
+              {user?.username || "..."}
+            </span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={8}>
             <DropdownMenuItem>
@@ -80,7 +87,7 @@ export function Navbar() {
               Profile
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive">
+            <DropdownMenuItem variant="destructive" onClick={logout}>
               <LogOut className="h-4 w-4" />
               Sign Out
             </DropdownMenuItem>

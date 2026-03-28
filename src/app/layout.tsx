@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Fira_Code } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Navbar } from "@/components/layout/navbar";
+import { AuthProvider } from "@/contexts/auth-context";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,13 +32,9 @@ export default function RootLayout({
       className={`${inter.variable} ${firaCode.variable} h-full antialiased`}
     >
       <body className="min-h-screen bg-gradient-to-br from-[#F0FDFA] via-white to-[#CCFBF1]">
-        <TooltipProvider>
-          <Sidebar />
-          <div className="ml-[260px] flex min-h-screen flex-col">
-            <Navbar />
-            <main className="flex-1 p-6">{children}</main>
-          </div>
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+        </AuthProvider>
       </body>
     </html>
   );

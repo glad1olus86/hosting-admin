@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { listSystemIps } from "@/lib/hestia-api";
+import { requireAdmin, isNextResponse } from "@/lib/auth-guard";
 
 export async function GET() {
+  const auth = await requireAdmin();
+  if (isNextResponse(auth)) return auth;
+
   try {
     const data = await listSystemIps();
-    // data is { "116.202.219.165": { OWNER, STATUS, NAME, ... }, ... }
     const ips = Object.entries(data).map(([ip, info]: [string, any]) => ({
       ip,
       name: info.NAME || "",

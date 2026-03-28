@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model DashboardAccount {
+  id           Int                 @id @default(autoincrement())
+  username     String              @unique @db.VarChar(50)
+  email        String              @unique @db.VarChar(255)
+  passwordHash String              @map("password_hash") @db.VarChar(255)
+  role         String              @default("user") @db.VarChar(10)
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+  systemUsers  AccountSystemUser[]
+
+  @@map("dashboard_accounts")
+}
+
+model AccountSystemUser {
+  id             Int              @id @default(autoincrement())
+  accountId      Int              @map("account_id")
+  hestiaUsername String           @map("hestia_username") @db.VarChar(50)
+  createdAt      DateTime         @default(now()) @map("created_at")
+  account        DashboardAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, hestiaUsername])
+  @@map("account_system_users")
+}
