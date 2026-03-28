@@ -142,6 +142,20 @@ export async function PATCH(request: Request) {
         break;
       }
 
+      case "change_email": {
+        if (!data.email) {
+          return NextResponse.json(
+            { error: "Email required" },
+            { status: 400 }
+          );
+        }
+        await prisma.dashboardAccount.update({
+          where: { id },
+          data: { email: data.email },
+        });
+        break;
+      }
+
       case "update_links": {
         // Delete all existing links and create new ones
         await prisma.accountSystemUser.deleteMany({ where: { accountId: id } });

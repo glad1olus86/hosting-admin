@@ -2,7 +2,7 @@
 set -e
 
 echo "Applying database schema..."
-npx prisma db push --skip-generate
+npx prisma db push
 
 echo "Starting application..."
 exec npm start
