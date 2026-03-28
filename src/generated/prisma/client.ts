@@ -51,3 +51,8 @@ export type DashboardAccount = Prisma.DashboardAccountModel
  * 
  */
 export type AccountSystemUser = Prisma.AccountSystemUserModel
+/**
+ * Model MetricSnapshot
+ * 
+ */
+export type MetricSnapshot = Prisma.MetricSnapshotModel

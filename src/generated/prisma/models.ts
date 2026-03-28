@@ -10,4 +10,5 @@
  */
 export type * from './models/DashboardAccount'
 export type * from './models/AccountSystemUser'
+export type * from './models/MetricSnapshot'
 export type * from './commonInputTypes'

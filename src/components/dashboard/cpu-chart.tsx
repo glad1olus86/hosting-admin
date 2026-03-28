@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { GlassCard } from "@/components/layout/glass-card";
 
-interface DataPoint {
+export interface DataPoint {
   time: string;
   cpu: number;
   ram: number;
@@ -20,9 +20,24 @@ interface DataPoint {
 interface CpuChartProps {
   data: DataPoint[];
   title?: string;
+  period?: string;
 }
 
-export function CpuChart({ data, title = "Server Load" }: CpuChartProps) {
+function formatTick(time: string, period?: string) {
+  if (!period || period === "live") return time;
+  try {
+    const d = new Date(time);
+    if (isNaN(d.getTime())) return time;
+    if (period === "7d") {
+      return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")} ${d.getHours().toString().padStart(2, "0")}:00`;
+    }
+    return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+  } catch {
+    return time;
+  }
+}
+
+export function CpuChart({ data, title = "Server Load", period }: CpuChartProps) {
   return (
     <GlassCard>
       <h3 className="mb-4 text-lg font-semibold text-[#134E4A]">{title}</h3>
@@ -54,9 +69,11 @@ export function CpuChart({ data, title = "Server Load" }: CpuChartProps) {
               />
               <XAxis
                 dataKey="time"
-                tick={{ fontSize: 12, fill: "#9CA3AF" }}
+                tick={{ fontSize: 11, fill: "#9CA3AF" }}
                 axisLine={false}
                 tickLine={false}
+                tickFormatter={(v) => formatTick(v, period)}
+                interval="preserveStartEnd"
               />
               <YAxis
                 tick={{ fontSize: 12, fill: "#9CA3AF" }}
@@ -72,6 +89,21 @@ export function CpuChart({ data, title = "Server Load" }: CpuChartProps) {
                   border: "1px solid rgba(255,255,255,0.3)",
                   borderRadius: "12px",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                }}
+                labelFormatter={(label) => {
+                  if (!period || period === "live") return label;
+                  try {
+                    const d = new Date(label);
+                    if (isNaN(d.getTime())) return label;
+                    return d.toLocaleString("ru-RU", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+                  } catch {
+                    return label;
+                  }
                 }}
                 formatter={(value, name) => [
                   `${value}%`,

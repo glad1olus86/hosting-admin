@@ -385,7 +385,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   DashboardAccount: 'DashboardAccount',
-  AccountSystemUser: 'AccountSystemUser'
+  AccountSystemUser: 'AccountSystemUser',
+  MetricSnapshot: 'MetricSnapshot'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -401,7 +402,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "dashboardAccount" | "accountSystemUser"
+    modelProps: "dashboardAccount" | "accountSystemUser" | "metricSnapshot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -537,6 +538,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    MetricSnapshot: {
+      payload: Prisma.$MetricSnapshotPayload<ExtArgs>
+      fields: Prisma.MetricSnapshotFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.MetricSnapshotFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MetricSnapshotPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.MetricSnapshotFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MetricSnapshotPayload>
+        }
+        findFirst: {
+          args: Prisma.MetricSnapshotFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MetricSnapshotPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.MetricSnapshotFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MetricSnapshotPayload>
+        }
+        findMany: {
+          args: Prisma.MetricSnapshotFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MetricSnapshotPayload>[]
+        }
+        create: {
+          args: Prisma.MetricSnapshotCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MetricSnapshotPayload>
+        }
+        createMany: {
+          args: Prisma.MetricSnapshotCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.MetricSnapshotDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MetricSnapshotPayload>
+        }
+        update: {
+          args: Prisma.MetricSnapshotUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MetricSnapshotPayload>
+        }
+        deleteMany: {
+          args: Prisma.MetricSnapshotDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.MetricSnapshotUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.MetricSnapshotUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MetricSnapshotPayload>
+        }
+        aggregate: {
+          args: Prisma.MetricSnapshotAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateMetricSnapshot>
+        }
+        groupBy: {
+          args: Prisma.MetricSnapshotGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MetricSnapshotGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.MetricSnapshotCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MetricSnapshotCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -599,6 +666,21 @@ export const AccountSystemUserScalarFieldEnum = {
 export type AccountSystemUserScalarFieldEnum = (typeof AccountSystemUserScalarFieldEnum)[keyof typeof AccountSystemUserScalarFieldEnum]
 
 
+export const MetricSnapshotScalarFieldEnum = {
+  id: 'id',
+  cpu: 'cpu',
+  ramPercent: 'ramPercent',
+  ramUsed: 'ramUsed',
+  ramTotal: 'ramTotal',
+  diskPercent: 'diskPercent',
+  netIn: 'netIn',
+  netOut: 'netOut',
+  recordedAt: 'recordedAt'
+} as const
+
+export type MetricSnapshotScalarFieldEnum = (typeof MetricSnapshotScalarFieldEnum)[keyof typeof MetricSnapshotScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -655,6 +737,13 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+/**
+ * Reference to a field of type 'BigInt'
+ */
+export type BigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt'>
     
 
 /**
@@ -754,6 +843,7 @@ export type PrismaClientOptions = ({
 export type GlobalOmitConfig = {
   dashboardAccount?: Prisma.DashboardAccountOmit
   accountSystemUser?: Prisma.AccountSystemUserOmit
+  metricSnapshot?: Prisma.MetricSnapshotOmit
 }
 
 /* Types for Logging */

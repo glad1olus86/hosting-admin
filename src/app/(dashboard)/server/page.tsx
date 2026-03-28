@@ -44,6 +44,11 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
+// ─── Constants ────────────────────────────────────────────
+
+const PERIODS = ["live", "1h", "6h", "24h", "7d"] as const;
+type Period = (typeof PERIODS)[number];
+
 // ─── Types ────────────────────────────────────────────────
 
 interface Metrics {
@@ -136,6 +141,12 @@ export default function ServerPage() {
     action: string;
   } | null>(null);
 
+  // ── Period / History ────────────────────────────────────
+  const [period, setPeriod] = useState<Period>("live");
+  const [historyCpu, setHistoryCpu] = useState<ChartPoint[]>([]);
+  const [historyNet, setHistoryNet] = useState<NetChartPoint[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
   // ── Fetchers ──────────────────────────────────────────
 
   const fetchMetrics = useCallback(async () => {
@@ -206,6 +217,34 @@ export default function ServerPage() {
       }
     } catch {}
   }, []);
+
+  const fetchHistory = useCallback(async (p: Period) => {
+    if (p === "live") return;
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`/api/metrics/history?period=${p}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.points) {
+        setHistoryCpu(data.points.map((pt: any) => ({
+          time: pt.time,
+          cpu: pt.cpu,
+          ram: pt.ram,
+        })));
+        setHistoryNet(data.points.map((pt: any) => ({
+          time: pt.time,
+          in: pt.netInRate || 0,
+          out: pt.netOutRate || 0,
+        })));
+      }
+    } catch {}
+    setHistoryLoading(false);
+  }, []);
+
+  const handlePeriodChange = useCallback((p: Period) => {
+    setPeriod(p);
+    if (p !== "live") fetchHistory(p);
+  }, [fetchHistory]);
 
   useEffect(() => {
     fetchMetrics();
@@ -468,6 +507,27 @@ export default function ServerPage() {
         </div>
       )}
 
+      {/* ─── Period Selector ───────────────────────────── */}
+      <div className="flex items-center gap-1">
+        {PERIODS.map((p) => (
+          <button
+            key={p}
+            onClick={() => handlePeriodChange(p)}
+            className={cn(
+              "px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
+              period === p
+                ? "bg-teal-600 text-white"
+                : "bg-white/60 text-gray-600 hover:bg-white/80 border border-gray-200"
+            )}
+          >
+            {p === "live" ? "Live" : p.toUpperCase()}
+          </button>
+        ))}
+        {historyLoading && (
+          <Loader2 className="h-4 w-4 animate-spin text-teal-600 ml-2" />
+        )}
+      </div>
+
       {/* ─── Charts ───────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <GlassCard>
@@ -475,14 +535,14 @@ export default function ServerPage() {
             CPU & RAM
           </h3>
           <div className="h-[250px] w-full">
-            {cpuHistory.length < 2 ? (
+            {(period === "live" ? cpuHistory : historyCpu).length < 2 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                 Collecting data...
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
-                  data={cpuHistory}
+                  data={period === "live" ? cpuHistory : historyCpu}
                   margin={{ top: 5, right: 10, left: -10, bottom: 0 }}
                 >
                   <defs>
@@ -533,6 +593,11 @@ export default function ServerPage() {
                     tick={{ fontSize: 11, fill: "#9CA3AF" }}
                     axisLine={false}
                     tickLine={false}
+                    tickFormatter={(v) => {
+                      if (period === "live") return v;
+                      try { const d = new Date(v); return isNaN(d.getTime()) ? v : period === "7d" ? `${d.getDate()}/${d.getMonth()+1}` : `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`; } catch { return v; }
+                    }}
+                    interval="preserveStartEnd"
                   />
                   <YAxis
                     tick={{ fontSize: 11, fill: "#9CA3AF" }}
@@ -573,14 +638,14 @@ export default function ServerPage() {
             Network Traffic
           </h3>
           <div className="h-[250px] w-full">
-            {netHistory.length < 2 ? (
+            {(period === "live" ? netHistory : historyNet).length < 2 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                 Collecting data...
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
-                  data={netHistory}
+                  data={period === "live" ? netHistory : historyNet}
                   margin={{ top: 5, right: 10, left: -10, bottom: 0 }}
                 >
                   <defs>
@@ -631,6 +696,11 @@ export default function ServerPage() {
                     tick={{ fontSize: 11, fill: "#9CA3AF" }}
                     axisLine={false}
                     tickLine={false}
+                    tickFormatter={(v) => {
+                      if (period === "live") return v;
+                      try { const d = new Date(v); return isNaN(d.getTime()) ? v : period === "7d" ? `${d.getDate()}/${d.getMonth()+1}` : `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`; } catch { return v; }
+                    }}
+                    interval="preserveStartEnd"
                   />
                   <YAxis
                     tick={{ fontSize: 11, fill: "#9CA3AF" }}

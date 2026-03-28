@@ -30,3 +30,18 @@ model AccountSystemUser {
   @@unique([accountId, hestiaUsername])
   @@map("account_system_users")
 }
+
+model MetricSnapshot {
+  id          Int      @id @default(autoincrement())
+  cpu         Float
+  ramPercent  Float    @map("ram_percent")
+  ramUsed     Int      @map("ram_used")
+  ramTotal    Int      @map("ram_total")
+  diskPercent Float    @map("disk_percent")
+  netIn       BigInt   @map("net_in")
+  netOut      BigInt   @map("net_out")
+  recordedAt  DateTime @map("recorded_at") @db.DateTime(0)
+
+  @@index([recordedAt])
+  @@map("metric_snapshots")
+}

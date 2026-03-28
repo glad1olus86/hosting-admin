@@ -11,10 +11,11 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { CpuChart } from "@/components/dashboard/cpu-chart";
+import { CpuChart, type DataPoint } from "@/components/dashboard/cpu-chart";
 import { ServiceStatus } from "@/components/dashboard/service-status";
 import { GlassCard } from "@/components/layout/glass-card";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface Stats {
   users: number;
@@ -29,19 +30,20 @@ interface Stats {
   packages: number;
 }
 
-interface MetricsPoint {
-  time: string;
-  cpu: number;
-  ram: number;
-}
+const PERIODS = ["live", "1h", "6h", "24h", "7d"] as const;
+type Period = (typeof PERIODS)[number];
 
-const MAX_CHART_POINTS = 30;
+const MAX_LIVE_POINTS = 30;
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [chartData, setChartData] = useState<MetricsPoint[]>([]);
+
+  const [period, setPeriod] = useState<Period>("live");
+  const [liveData, setLiveData] = useState<DataPoint[]>([]);
+  const [historyData, setHistoryData] = useState<DataPoint[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const metricsInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStats = useCallback(async () => {
@@ -67,15 +69,49 @@ export default function DashboardPage() {
 
       const now = new Date();
       const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+      const point: DataPoint = { time: timeStr, cpu: data.cpu, ram: data.ram.percent };
 
-      setChartData((prev) => {
-        const next = [...prev, { time: timeStr, cpu: data.cpu, ram: data.ram.percent }];
-        return next.length > MAX_CHART_POINTS ? next.slice(-MAX_CHART_POINTS) : next;
+      setLiveData((prev) => {
+        const next = [...prev, point];
+        return next.length > MAX_LIVE_POINTS ? next.slice(-MAX_LIVE_POINTS) : next;
       });
+
+      // Append to history view if active
+      if (period !== "live") {
+        setHistoryData((prev) => [...prev, { time: new Date().toISOString(), cpu: data.cpu, ram: data.ram.percent }]);
+      }
     } catch {
       // Non-critical
     }
+  }, [period]);
+
+  const fetchHistory = useCallback(async (p: Period) => {
+    if (p === "live") return;
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`/api/metrics/history?period=${p}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.points) {
+        setHistoryData(data.points.map((pt: any) => ({
+          time: pt.time,
+          cpu: pt.cpu,
+          ram: pt.ram,
+        })));
+      }
+    } catch {
+      // Non-critical
+    } finally {
+      setHistoryLoading(false);
+    }
   }, []);
+
+  const handlePeriodChange = useCallback((p: Period) => {
+    setPeriod(p);
+    if (p !== "live") {
+      fetchHistory(p);
+    }
+  }, [fetchHistory]);
 
   useEffect(() => {
     fetchStats();
@@ -90,13 +126,14 @@ export default function DashboardPage() {
     };
   }, [fetchStats, fetchMetrics]);
 
+  const chartData = period === "live" ? liveData : historyData;
+
   const formatDisk = (mb: number) => {
     if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
     return `${mb} MB`;
   };
 
   const formatUptime = (uptime: string) => {
-    // If it's a number (seconds), format it
     const sec = parseInt(uptime, 10);
     if (!isNaN(sec) && String(sec) === uptime.trim()) {
       const days = Math.floor(sec / 86400);
@@ -221,8 +258,29 @@ export default function DashboardPage() {
         </GlassCard>
       )}
 
-      {/* Live CPU & RAM Chart */}
-      <CpuChart data={chartData} />
+      {/* Period Selector + Chart */}
+      <div className="space-y-0">
+        <div className="flex items-center gap-1 mb-3">
+          {PERIODS.map((p) => (
+            <button
+              key={p}
+              onClick={() => handlePeriodChange(p)}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
+                period === p
+                  ? "bg-teal-600 text-white"
+                  : "bg-white/60 text-gray-600 hover:bg-white/80 border border-gray-200"
+              )}
+            >
+              {p === "live" ? "Live" : p.toUpperCase()}
+            </button>
+          ))}
+          {historyLoading && (
+            <Loader2 className="h-4 w-4 animate-spin text-teal-600 ml-2" />
+          )}
+        </div>
+        <CpuChart data={chartData} period={period} />
+      </div>
 
       {/* Service Status */}
       <ServiceStatus />

@@ -52,7 +52,8 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   DashboardAccount: 'DashboardAccount',
-  AccountSystemUser: 'AccountSystemUser'
+  AccountSystemUser: 'AccountSystemUser',
+  MetricSnapshot: 'MetricSnapshot'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -92,6 +93,21 @@ export const AccountSystemUserScalarFieldEnum = {
 } as const
 
 export type AccountSystemUserScalarFieldEnum = (typeof AccountSystemUserScalarFieldEnum)[keyof typeof AccountSystemUserScalarFieldEnum]
+
+
+export const MetricSnapshotScalarFieldEnum = {
+  id: 'id',
+  cpu: 'cpu',
+  ramPercent: 'ramPercent',
+  ramUsed: 'ramUsed',
+  ramTotal: 'ramTotal',
+  diskPercent: 'diskPercent',
+  netIn: 'netIn',
+  netOut: 'netOut',
+  recordedAt: 'recordedAt'
+} as const
+
+export type MetricSnapshotScalarFieldEnum = (typeof MetricSnapshotScalarFieldEnum)[keyof typeof MetricSnapshotScalarFieldEnum]
 
 
 export const SortOrder = {
