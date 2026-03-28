@@ -326,7 +326,7 @@ export default function ServerPage() {
               <span className="font-medium text-[#134E4A]">
                 {metrics
                   ? formatUptime(metrics.uptimeSeconds)
-                  : stats.uptime}
+                  : (/^\d+$/.test(stats.uptime) ? formatUptime(parseInt(stats.uptime, 10)) : stats.uptime)}
               </span>
             </div>
             <div>
