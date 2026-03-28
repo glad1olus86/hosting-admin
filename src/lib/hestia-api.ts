@@ -731,6 +731,98 @@ export async function changeFtpPassword(user: string, domain: string, ftpUser: s
   return { success: true };
 }
 
+// === DOMAIN TEMPLATES ===
+export async function listBackendTemplates(): Promise<string[]> {
+  const data = await hestiaCommand("v-list-web-templates-backend", "json");
+  if (Array.isArray(data)) return data;
+  if (typeof data === "object" && data !== null) return Object.keys(data);
+  return [];
+}
+
+export async function listWebTemplates(): Promise<string[]> {
+  const data = await hestiaCommand("v-list-web-templates", "json");
+  if (Array.isArray(data)) return data;
+  if (typeof data === "object" && data !== null) return Object.keys(data);
+  return [];
+}
+
+export async function listProxyTemplates(): Promise<string[]> {
+  const data = await hestiaCommand("v-list-web-templates-proxy", "json");
+  if (Array.isArray(data)) return data;
+  if (typeof data === "object" && data !== null) return Object.keys(data);
+  return [];
+}
+
+export async function changeBackendTemplate(user: string, domain: string, template: string) {
+  await hestiaActionCommand("v-change-web-domain-backend-tpl", user, domain, template);
+  return { success: true };
+}
+
+export async function changeWebTemplate(user: string, domain: string, template: string) {
+  await hestiaActionCommand("v-change-web-domain-tpl", user, domain, template);
+  return { success: true };
+}
+
+export async function changeProxyTemplate(user: string, domain: string, template: string) {
+  await hestiaActionCommand("v-change-web-domain-proxy-tpl", user, domain, template);
+  return { success: true };
+}
+
+// === DOMAIN ALIASES ===
+export async function addDomainAlias(user: string, domain: string, alias: string) {
+  await hestiaActionCommand("v-add-web-domain-alias", user, domain, alias);
+  return { success: true };
+}
+
+export async function deleteDomainAlias(user: string, domain: string, alias: string) {
+  await hestiaActionCommand("v-delete-web-domain-alias", user, domain, alias);
+  return { success: true };
+}
+
+// === DOMAIN REDIRECTS ===
+export async function addDomainRedirect(user: string, domain: string, redirect: string, httpCode?: string) {
+  const args = [user, domain, redirect];
+  if (httpCode) args.push(httpCode);
+  await hestiaActionCommand("v-add-web-domain-redirect", ...args);
+  return { success: true };
+}
+
+export async function deleteDomainRedirect(user: string, domain: string, redirectId: string) {
+  await hestiaActionCommand("v-delete-web-domain-redirect", user, domain, redirectId);
+  return { success: true };
+}
+
+// === SUSPEND/UNSUSPEND DOMAIN ===
+export async function suspendDomain(user: string, domain: string) {
+  await hestiaActionCommand("v-suspend-web-domain", user, domain);
+  return { success: true };
+}
+
+export async function unsuspendDomain(user: string, domain: string) {
+  await hestiaActionCommand("v-unsuspend-web-domain", user, domain);
+  return { success: true };
+}
+
+// === HTTP AUTH ===
+export async function addHttpAuth(user: string, domain: string, authUser: string, password: string) {
+  await hestiaActionCommand("v-add-web-domain-httpauth", user, domain, authUser, password);
+  return { success: true };
+}
+
+export async function deleteHttpAuth(user: string, domain: string, authUser: string) {
+  await hestiaActionCommand("v-delete-web-domain-httpauth", user, domain, authUser);
+  return { success: true };
+}
+
+export async function listHttpAuth(user: string, domain: string) {
+  const data = await hestiaCommand("v-list-web-domain-httpauth", user, domain, "json");
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return [];
+  return Object.entries(data).map(([authUser, info]: [string, any]) => ({
+    authUser,
+    ...info,
+  }));
+}
+
 // === DEBUG ===
 export async function testConnection(): Promise<{
   ok: boolean;
