@@ -3,7 +3,8 @@ import { requireAdmin, isNextResponse } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 
 const PERIODS: Record<string, { seconds: number; groupBy: number }> = {
-  "1h": { seconds: 3600, groupBy: 0 },         // raw data (~120 points)
+  "5m": { seconds: 300, groupBy: 0 },           // raw data (~10 points) — for live seed
+  "1h": { seconds: 3600, groupBy: 0 },          // raw data (~120 points)
   "6h": { seconds: 21600, groupBy: 180 },       // 3-min groups (~120)
   "24h": { seconds: 86400, groupBy: 600 },      // 10-min groups (~144)
   "7d": { seconds: 604800, groupBy: 3600 },     // 1-hour groups (~168)

@@ -106,6 +106,23 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // Seed live chart with last 5 minutes from DB
+  const seedLiveData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/metrics/history?period=5m");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.points && data.points.length > 0) {
+        const seeded: DataPoint[] = data.points.map((pt: any) => {
+          const d = new Date(pt.time);
+          const timeStr = `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")}`;
+          return { time: timeStr, cpu: pt.cpu, ram: pt.ram };
+        });
+        setLiveData(seeded);
+      }
+    } catch {}
+  }, []);
+
   const handlePeriodChange = useCallback((p: Period) => {
     setPeriod(p);
     if (p !== "live") {
@@ -116,6 +133,7 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchStats();
     fetchMetrics();
+    seedLiveData();
 
     const statsInterval = setInterval(fetchStats, 30000);
     metricsInterval.current = setInterval(fetchMetrics, 10000);
@@ -124,7 +142,7 @@ export default function DashboardPage() {
       clearInterval(statsInterval);
       if (metricsInterval.current) clearInterval(metricsInterval.current);
     };
-  }, [fetchStats, fetchMetrics]);
+  }, [fetchStats, fetchMetrics, seedLiveData]);
 
   const chartData = period === "live" ? liveData : historyData;
 

@@ -241,6 +241,43 @@ export default function ServerPage() {
     setHistoryLoading(false);
   }, []);
 
+  // Seed live charts with last 5 minutes from DB
+  const seedLiveData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/metrics/history?period=5m");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.points && data.points.length > 0) {
+        const cpuSeeded: ChartPoint[] = data.points.map((pt: any) => {
+          const d = new Date(pt.time);
+          return {
+            time: `${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")}`,
+            cpu: pt.cpu,
+            ram: pt.ram,
+          };
+        });
+        setCpuHistory(cpuSeeded);
+
+        // Compute net rates from sequential points
+        const netSeeded: NetChartPoint[] = [];
+        for (let i = 1; i < data.points.length; i++) {
+          const pt = data.points[i];
+          const prev = data.points[i - 1];
+          const d = new Date(pt.time);
+          const timeDelta = (new Date(pt.time).getTime() - new Date(prev.time).getTime()) / 1000;
+          if (timeDelta > 0) {
+            netSeeded.push({
+              time: `${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")}`,
+              in: Math.max(0, Math.round((pt.netInRate || 0))),
+              out: Math.max(0, Math.round((pt.netOutRate || 0))),
+            });
+          }
+        }
+        if (netSeeded.length > 0) setNetHistory(netSeeded);
+      }
+    } catch {}
+  }, []);
+
   const handlePeriodChange = useCallback((p: Period) => {
     setPeriod(p);
     if (p !== "live") fetchHistory(p);
@@ -250,6 +287,7 @@ export default function ServerPage() {
     fetchMetrics();
     fetchStats();
     fetchServices();
+    seedLiveData();
 
     const metricsTimer = setInterval(fetchMetrics, 5000);
     const statsTimer = setInterval(fetchStats, 30000);
@@ -260,7 +298,7 @@ export default function ServerPage() {
       clearInterval(statsTimer);
       clearInterval(servicesTimer);
     };
-  }, [fetchMetrics, fetchStats, fetchServices]);
+  }, [fetchMetrics, fetchStats, fetchServices, seedLiveData]);
 
   // ── Service management ────────────────────────────────
 
