@@ -17,6 +17,8 @@ import {
   ExternalLink,
   Search,
   Globe,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { GlassCard } from "@/components/layout/glass-card";
 import { Button } from "@/components/ui/button";
@@ -93,6 +95,110 @@ interface ServerIp {
   domains: number;
 }
 
+/* ═══ Recursive domain rows with nested subdomains ═══ */
+function DomainRows({
+  domain, depth, childrenMap, expanded, onToggleExpand,
+  onNavigate, onDelete, onWpInstall, sslLoading, phpVersion, formatDisk,
+}: {
+  domain: HestiaDomain; depth: number;
+  childrenMap: Map<string, HestiaDomain[]>; expanded: Set<string>;
+  onToggleExpand: (domain: string) => void;
+  onNavigate: (d: HestiaDomain) => void;
+  onDelete: (d: HestiaDomain) => void; onWpInstall: (d: HestiaDomain) => void;
+  sslLoading: Set<string>; phpVersion: (b: string) => string; formatDisk: (mb: string) => string;
+}) {
+  const children = childrenMap.get(domain.domain) || [];
+  const hasChildren = children.length > 0;
+  const isExpanded = expanded.has(domain.domain);
+  const hasSSL = domain.SSL !== "" && domain.SSL !== "no";
+  const isSuspended = domain.SUSPENDED !== "no";
+  const isGettingSsl = sslLoading.has(`${domain.user}:${domain.domain}`);
+
+  return (
+    <>
+      <TableRow
+        className={cn("cursor-pointer hover:bg-teal-50/50 transition-colors", depth > 0 && "bg-slate-50/40")}
+        onClick={() => onNavigate(domain)}
+      >
+        <TableCell className="font-medium text-[#134E4A]">
+          <div className="flex items-center gap-1" style={{ paddingLeft: `${depth * 24}px` }}>
+            {hasChildren ? (
+              <button
+                className="p-0.5 rounded hover:bg-slate-200/60 transition-colors cursor-pointer shrink-0"
+                onClick={(e) => { e.stopPropagation(); onToggleExpand(domain.domain); }}
+              >
+                {isExpanded
+                  ? <ChevronDown className="h-4 w-4 text-slate-500" />
+                  : <ChevronRight className="h-4 w-4 text-slate-400" />}
+              </button>
+            ) : (
+              <span className="w-5 shrink-0" />
+            )}
+            <Globe className={cn("h-4 w-4 shrink-0", depth === 0 ? "text-teal-600" : "text-teal-400")} />
+            <span className={depth > 0 ? "text-[13px]" : ""}>{domain.domain}</span>
+            {hasChildren && (
+              <Badge className="bg-slate-100 text-slate-500 border-slate-200 text-[10px] ml-1 px-1.5 py-0">{children.length}</Badge>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="text-muted-foreground">{domain.user}</TableCell>
+        <TableCell>
+          <Badge className="bg-blue-100 text-blue-700 border-blue-200 font-mono text-[11px]">
+            {phpVersion(domain.BACKEND)}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          {isGettingSsl ? (
+            <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+          ) : hasSSL ? (
+            <Tooltip>
+              <TooltipTrigger>
+                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+              </TooltipTrigger>
+              <TooltipContent>
+                SSL active{domain.LETSENCRYPT === "yes" ? " (Let's Encrypt)" : ""}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <ShieldOff className="h-4 w-4 text-gray-300" />
+          )}
+        </TableCell>
+        <TableCell className="text-xs text-muted-foreground">
+          {formatDisk(domain.U_DISK)}
+        </TableCell>
+        <TableCell>
+          {isSuspended ? (
+            <Badge className="bg-red-100 text-red-700 border-red-200">Suspended</Badge>
+          ) : (
+            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Active</Badge>
+          )}
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="flex items-center justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="sm" className="cursor-pointer h-8 w-8 p-0" title="WordPress Quick Install"
+              onClick={() => onWpInstall(domain)}>
+              <Zap className="h-4 w-4 text-amber-500" />
+            </Button>
+            <Button variant="ghost" size="sm" className="cursor-pointer h-8 w-8 p-0"
+              onClick={() => onDelete(domain)}>
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+      {isExpanded && children.map((child) => (
+        <DomainRows
+          key={`${child.user}-${child.domain}`}
+          domain={child} depth={depth + 1}
+          childrenMap={childrenMap} expanded={expanded} onToggleExpand={onToggleExpand}
+          onNavigate={onNavigate} onDelete={onDelete} onWpInstall={onWpInstall}
+          sslLoading={sslLoading} phpVersion={phpVersion} formatDisk={formatDisk}
+        />
+      ))}
+    </>
+  );
+}
+
 export default function DomainsPage() {
   const router = useRouter();
   const [domains, setDomains] = useState<HestiaDomain[]>([]);
@@ -101,6 +207,7 @@ export default function DomainsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   // SSL loading
   const [sslLoading, setSslLoading] = useState<Set<string>>(new Set());
@@ -324,6 +431,42 @@ export default function DomainsPage() {
       )
     : domains;
 
+  // Group subdomains under their parent domain
+  const domainSet = new Set(filteredDomains.map((d) => d.domain));
+
+  const getParentDomain = (domain: string): string | null => {
+    const parts = domain.split(".");
+    // Try progressively shorter suffixes: a.b.c.com → b.c.com → c.com
+    for (let i = 1; i < parts.length - 1; i++) {
+      const candidate = parts.slice(i).join(".");
+      if (domainSet.has(candidate)) return candidate;
+    }
+    return null;
+  };
+
+  // Build grouped structure: parent → children
+  const childrenMap = new Map<string, HestiaDomain[]>();
+  const topLevel: HestiaDomain[] = [];
+
+  filteredDomains.forEach((d) => {
+    const parent = getParentDomain(d.domain);
+    if (parent) {
+      if (!childrenMap.has(parent)) childrenMap.set(parent, []);
+      childrenMap.get(parent)!.push(d);
+    } else {
+      topLevel.push(d);
+    }
+  });
+
+  const toggleExpand = (domain: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(domain)) next.delete(domain);
+      else next.add(domain);
+      return next;
+    });
+  };
+
   // ── Render ──
 
   if (loading) {
@@ -386,90 +529,22 @@ export default function DomainsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDomains.map((d) => {
-                const hasSSL = d.SSL !== "" && d.SSL !== "no";
-                const isSuspended = d.SUSPENDED !== "no";
-                const sslKey = `${d.user}:${d.domain}`;
-                const isGettingSsl = sslLoading.has(sslKey);
-
-                return (
-                  <TableRow
-                    key={`${d.user}-${d.domain}`}
-                    className="cursor-pointer hover:bg-teal-50/50 transition-colors"
-                    onClick={() => navigateToDomain(d)}
-                  >
-                    <TableCell className="font-medium text-[#134E4A]">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-teal-600 shrink-0" />
-                        {d.domain}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{d.user}</TableCell>
-                    <TableCell>
-                      <Badge className="bg-blue-100 text-blue-700 border-blue-200 font-mono text-[11px]">
-                        {phpVersion(d.BACKEND)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {isGettingSsl ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
-                      ) : hasSSL ? (
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            SSL active{d.LETSENCRYPT === "yes" ? " (Let's Encrypt)" : ""}
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        <ShieldOff className="h-4 w-4 text-gray-300" />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {formatDisk(d.U_DISK)}
-                    </TableCell>
-                    <TableCell>
-                      {isSuspended ? (
-                        <Badge className="bg-red-100 text-red-700 border-red-200">Suspended</Badge>
-                      ) : (
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Active</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="cursor-pointer h-8 w-8 p-0"
-                          title="WordPress Quick Install"
-                          onClick={() => {
-                            setWpTarget({ user: d.user, domain: d.domain });
-                            setWpForm({ admin_user: "admin", admin_password: "", admin_email: "", plugins: ["updraftplus"] });
-                            setWpJobId(null);
-                            setWpStatus(null);
-                            setShowWpPassword(false);
-                            setWpDialogOpen(true);
-                          }}
-                        >
-                          <Zap className="h-4 w-4 text-amber-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="cursor-pointer h-8 w-8 p-0"
-                          onClick={() => {
-                            setDeleteTarget({ user: d.user, domain: d.domain });
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {topLevel.map((d) => (
+                <DomainRows
+                  key={`${d.user}-${d.domain}`}
+                  domain={d}
+                  depth={0}
+                  childrenMap={childrenMap}
+                  expanded={expanded}
+                  onToggleExpand={toggleExpand}
+                  onNavigate={navigateToDomain}
+                  onDelete={(dd) => { setDeleteTarget({ user: dd.user, domain: dd.domain }); setDeleteDialogOpen(true); }}
+                  onWpInstall={(dd) => { setWpTarget({ user: dd.user, domain: dd.domain }); setWpForm({ admin_user: "admin", admin_password: "", admin_email: "", plugins: ["updraftplus"] }); setWpJobId(null); setWpStatus(null); setShowWpPassword(false); setWpDialogOpen(true); }}
+                  sslLoading={sslLoading}
+                  phpVersion={phpVersion}
+                  formatDisk={formatDisk}
+                />
+              ))}
             </TableBody>
           </Table>
         )}
