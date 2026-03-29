@@ -573,7 +573,7 @@ export async function unsuspendMailAccount(user: string, domain: string, account
 
 // === MAIL SSL ===
 // Uses web domain's LE certs to enable mail SSL.
-// v-add-mail-domain-ssl expects files named mail.domain.crt/key/ca in SSL_DIR.
+// v-add-mail-domain-ssl expects $ssl_dir/$domain.crt/key/ca (no mail. prefix).
 export async function addLetsEncryptMail(user: string, domain: string) {
   const { execAsRoot } = await import("@/lib/ssh-client");
   const webSslDir = `/home/${user}/conf/web/${domain}/ssl`;
@@ -581,17 +581,17 @@ export async function addLetsEncryptMail(user: string, domain: string) {
 
   const script = [
     `mkdir -p ${tmpDir}`,
-    `cp ${webSslDir}/${domain}.crt ${tmpDir}/mail.${domain}.crt 2>/dev/null || cp ${webSslDir}/${domain}.pem ${tmpDir}/mail.${domain}.crt`,
-    `cp ${webSslDir}/${domain}.key ${tmpDir}/mail.${domain}.key`,
-    `cp ${webSslDir}/${domain}.ca ${tmpDir}/mail.${domain}.ca 2>/dev/null || true`,
+    `cp ${webSslDir}/${domain}.crt ${tmpDir}/${domain}.crt`,
+    `cp ${webSslDir}/${domain}.key ${tmpDir}/${domain}.key`,
+    `cp ${webSslDir}/${domain}.ca ${tmpDir}/${domain}.ca 2>/dev/null || true`,
     `/usr/local/hestia/bin/v-add-mail-domain-ssl ${user} ${domain} ${tmpDir} no`,
     `rm -rf ${tmpDir}`,
   ].join(" && ");
 
   const result = await execAsRoot(script);
-  if (result.code !== 0) {
-    const errMsg = result.stdout || result.stderr || "Failed to add mail SSL";
-    throw new Error(errMsg.replace(/^\[sudo\].*\n?/, "").trim());
+  const output = (result.stdout || result.stderr || "").replace(/^\[sudo\].*\n?/, "").trim();
+  if (result.code !== 0 || /^Error:/im.test(output)) {
+    throw new Error(output || "Failed to add mail SSL");
   }
   return { success: true };
 }
