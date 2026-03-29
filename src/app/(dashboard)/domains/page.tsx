@@ -155,7 +155,15 @@ export default function DomainsPage() {
       const res = await fetch("/api/ips");
       if (!res.ok) return;
       const data = await res.json();
-      if (!data.error) setServerIps(data);
+      if (!data.error) {
+        const ips = data as ServerIp[];
+        setServerIps(ips);
+        // Pre-select the primary IP (most domains assigned)
+        if (ips.length > 0) {
+          const primary = [...ips].sort((a, b) => b.domains - a.domains)[0];
+          setAddForm((f) => f.ip ? f : { ...f, ip: primary.ip });
+        }
+      }
     } catch {}
   }, []);
 
@@ -211,7 +219,8 @@ export default function DomainsPage() {
       const domainUser = addForm.user;
       const domainName = addForm.domain;
       setAddDialogOpen(false);
-      setAddForm({ user: "", domain: "", ip: "", ssl: false });
+      const primaryIp = serverIps.length > 0 ? [...serverIps].sort((a, b) => b.domains - a.domains)[0].ip : "";
+      setAddForm({ user: "", domain: "", ip: primaryIp, ssl: false });
       await fetchDomains();
       if (wantSsl) requestSsl(domainUser, domainName);
     } catch (err: any) {
