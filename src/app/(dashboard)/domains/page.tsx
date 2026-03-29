@@ -107,7 +107,7 @@ export default function DomainsPage() {
 
   // Add domain dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [addForm, setAddForm] = useState({ user: "", domain: "", ip: "", ssl: false });
+  const [addForm, setAddForm] = useState({ user: "", domain: "", ip: "", ssl: false, mail: true });
   const [addLoading, setAddLoading] = useState(false);
 
   // Delete dialog
@@ -211,7 +211,7 @@ export default function DomainsPage() {
       const res = await fetch("/api/domains", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: addForm.user, domain: addForm.domain, ip: addForm.ip || undefined }),
+        body: JSON.stringify({ user: addForm.user, domain: addForm.domain, ip: addForm.ip || undefined, mail: addForm.mail }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed to add domain");
@@ -220,7 +220,7 @@ export default function DomainsPage() {
       const domainName = addForm.domain;
       setAddDialogOpen(false);
       const primaryIp = serverIps.length > 0 ? [...serverIps].sort((a, b) => b.domains - a.domains)[0].ip : "";
-      setAddForm({ user: "", domain: "", ip: primaryIp, ssl: false });
+      setAddForm({ user: "", domain: "", ip: primaryIp, ssl: false, mail: true });
       await fetchDomains();
       if (wantSsl) requestSsl(domainUser, domainName);
     } catch (err: any) {
@@ -523,6 +523,16 @@ export default function DomainsPage() {
                 </Select>
               </div>
             )}
+            <div className="flex items-center gap-2">
+              <input
+                id="add-mail"
+                type="checkbox"
+                checked={addForm.mail}
+                onChange={(e) => setAddForm((f) => ({ ...f, mail: e.target.checked }))}
+                className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+              />
+              <Label htmlFor="add-mail">Enable Mail (creates mail.domain DNS record)</Label>
+            </div>
             <div className="flex items-center gap-2">
               <input
                 id="add-ssl"

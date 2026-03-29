@@ -171,13 +171,35 @@ export async function addDomain(user: string, domain: string, ip?: string) {
   }
 }
 
+// Creates only web domain + DNS zone (no mail domain)
+export async function addWebDomainOnly(user: string, domain: string, ip?: string) {
+  if (ip) {
+    await hestiaCommand("v-add-web-domain", user, domain, ip);
+  } else {
+    await hestiaCommand("v-add-web-domain", user, domain);
+  }
+  // Also create DNS zone
+  try { await hestiaCommand("v-add-dns-domain", user, domain); } catch {}
+  return { success: true };
+}
+
 export async function deleteDomain(user: string, domain: string) {
   return hestiaCommand("v-delete-web-domain", user, domain);
 }
 
 export async function addLetsEncrypt(user: string, domain: string) {
-  // Request LE cert for web + mail (4th arg "yes" = include mail.domain)
-  await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
+  // Try with mail subdomain first, fall back to web-only if mail DNS doesn't exist
+  try {
+    await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
+  } catch (err: any) {
+    const msg = (err?.message || "").toLowerCase();
+    if (msg.includes("dns record") || msg.includes("mail.") || msg.includes("doesn't exist") || msg.includes("does not exist")) {
+      // mail.{domain} DNS not configured — request SSL for web only
+      await hestiaCommand("v-add-letsencrypt-domain", user, domain);
+    } else {
+      throw err;
+    }
+  }
   // Auto-enable HTTP→HTTPS redirect
   try {
     await hestiaCommand("v-add-web-domain-ssl-force", user, domain);
@@ -575,13 +597,34 @@ export async function unsuspendMailAccount(user: string, domain: string, account
 // === MAIL SSL ===
 // Re-requests LE cert for web domain with mail.domain included in SAN.
 // Deletes old cert first, then requests new one with MAIL=yes.
+// If mail.{domain} DNS record is missing, creates it automatically.
 export async function addLetsEncryptMail(user: string, domain: string) {
   // Delete existing LE cert (ignore errors if none exists)
   try {
     await hestiaCommand("v-delete-letsencrypt-domain", user, domain);
   } catch {}
-  // Request new LE cert with mail subdomain included
-  await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
+  // Try requesting cert with mail
+  try {
+    await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
+  } catch (err: any) {
+    const msg = (err?.message || "").toLowerCase();
+    if (msg.includes("dns record") || msg.includes("doesn't exist") || msg.includes("does not exist")) {
+      // Auto-create mail.{domain} DNS record and mail domain, then retry
+      const domainInfo = await hestiaCommand("v-list-web-domain", user, domain, "json");
+      const ip = domainInfo?.[domain]?.IP || "116.202.219.165";
+      // Ensure DNS zone exists
+      try { await hestiaCommand("v-add-dns-domain", user, domain); } catch {}
+      // Add mail A record
+      try { await hestiaActionCommand("v-add-dns-record", user, domain, "mail", "A", ip); } catch {}
+      // Ensure mail domain exists
+      try { await hestiaActionCommand("v-add-mail-domain", user, domain); } catch {}
+      try { await hestiaActionCommand("v-add-mail-domain-dkim", user, domain); } catch {}
+      // Retry SSL with mail
+      await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
+    } else {
+      throw err;
+    }
+  }
   // Re-enable HTTPS redirect
   try {
     await hestiaCommand("v-add-web-domain-ssl-force", user, domain);

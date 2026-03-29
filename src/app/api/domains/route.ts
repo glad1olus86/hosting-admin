@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   listAllDomains,
   addDomain,
+  addWebDomainOnly,
   deleteDomain,
   addLetsEncrypt,
 } from "@/lib/hestia-api";
@@ -28,11 +29,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { user, domain, ip } = body;
+    const { user, domain, ip, mail } = body;
     if (!canAccessUser(auth.allowedUsernames, user)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    await addDomain(user, domain, ip || undefined);
+    if (mail === false) {
+      await addWebDomainOnly(user, domain, ip || undefined);
+    } else {
+      // Default: create web + mail + DNS (v-add-domain)
+      await addDomain(user, domain, ip || undefined);
+    }
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
