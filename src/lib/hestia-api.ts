@@ -188,23 +188,40 @@ export async function deleteDomain(user: string, domain: string) {
 }
 
 export async function addLetsEncrypt(user: string, domain: string) {
-  // Try with mail subdomain first, fall back to web-only if mail DNS doesn't exist
+  // Helper: check if SSL is actually installed after API call
+  // (HestiaCP API has a bug — returns "OK" even when command fails silently)
+  const verifySSL = async (): Promise<boolean> => {
+    try {
+      const info = await hestiaCommand("v-list-web-domain", user, domain, "json");
+      return info?.[domain]?.SSL === "yes";
+    } catch { return false; }
+  };
+
+  // Try with mail subdomain first
   try {
     await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
-  } catch (err: any) {
-    const msg = (err?.message || "").toLowerCase();
-    if (msg.includes("dns record") || msg.includes("mail.") || msg.includes("doesn't exist") || msg.includes("does not exist")) {
-      // mail.{domain} DNS not configured — request SSL for web only
+  } catch {
+    // Ignore — will verify below
+  }
+
+  // Verify SSL was actually installed (API may return false "OK")
+  if (!(await verifySSL())) {
+    // Retry without mail flag
+    try {
       await hestiaCommand("v-add-letsencrypt-domain", user, domain);
-    } else {
-      throw err;
+    } catch {
+      // Ignore — will verify below
+    }
+    if (!(await verifySSL())) {
+      throw new Error("SSL certificate request failed. Check that the domain resolves to the server IP.");
     }
   }
+
   // Auto-enable HTTP→HTTPS redirect
   try {
     await hestiaCommand("v-add-web-domain-ssl-force", user, domain);
   } catch {
-    // Non-critical, SSL still works without redirect
+    // Non-critical
   }
   return { success: true };
 }
@@ -599,42 +616,43 @@ export async function unsuspendMailAccount(user: string, domain: string, account
 // Deletes old cert first, then requests new one with MAIL=yes.
 // If mail.{domain} DNS record is missing, creates it automatically.
 export async function addLetsEncryptMail(user: string, domain: string) {
+  // Helper: check if SSL is actually installed
+  const verifySSL = async (): Promise<boolean> => {
+    try {
+      const info = await hestiaCommand("v-list-web-domain", user, domain, "json");
+      return info?.[domain]?.SSL === "yes";
+    } catch { return false; }
+  };
+
   // Delete existing LE cert (ignore errors if none exists)
   try {
     await hestiaCommand("v-delete-letsencrypt-domain", user, domain);
   } catch {}
 
+  // Ensure mail DNS + mail domain exist
+  const domainInfo = await hestiaCommand("v-list-web-domain", user, domain, "json");
+  const ip = domainInfo?.[domain]?.IP || "116.202.219.165";
+  try { await hestiaCommand("v-add-dns-domain", user, domain); } catch {}
+  try { await hestiaActionCommand("v-add-dns-record", user, domain, "mail", "A", ip); } catch {}
+  try { await hestiaActionCommand("v-add-mail-domain", user, domain); } catch {}
+  try { await hestiaActionCommand("v-add-mail-domain-dkim", user, domain); } catch {}
+
   // Try requesting cert with mail
-  let sslRestored = false;
   try {
     await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
-  } catch (err: any) {
-    const msg = (err?.message || "").toLowerCase();
-    if (msg.includes("dns record") || msg.includes("doesn't exist") || msg.includes("does not exist")) {
-      // Auto-create mail.{domain} DNS record and mail domain, then retry
-      const domainInfo = await hestiaCommand("v-list-web-domain", user, domain, "json");
-      const ip = domainInfo?.[domain]?.IP || "116.202.219.165";
-      try { await hestiaCommand("v-add-dns-domain", user, domain); } catch {}
-      try { await hestiaActionCommand("v-add-dns-record", user, domain, "mail", "A", ip); } catch {}
-      try { await hestiaActionCommand("v-add-mail-domain", user, domain); } catch {}
-      try { await hestiaActionCommand("v-add-mail-domain-dkim", user, domain); } catch {}
-      try {
-        await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
-      } catch (retryErr: any) {
-        // Retry failed — restore web-only SSL so site isn't left without cert
-        try {
-          await hestiaCommand("v-add-letsencrypt-domain", user, domain);
-          sslRestored = true;
-        } catch {}
-        throw new Error(`Mail SSL failed: ${retryErr?.message || "Unknown error"}. ${sslRestored ? "Web SSL was restored." : "Please re-request web SSL manually."}`);
-      }
+  } catch {}
+
+  // Verify SSL installed with mail
+  if (!(await verifySSL())) {
+    // Mail SSL failed — restore web-only SSL
+    try {
+      await hestiaCommand("v-add-letsencrypt-domain", user, domain);
+    } catch {}
+
+    if (await verifySSL()) {
+      throw new Error("Mail SSL failed, but web SSL was restored. The mail subdomain may not resolve externally.");
     } else {
-      // Non-DNS error — restore web-only SSL
-      try {
-        await hestiaCommand("v-add-letsencrypt-domain", user, domain);
-        sslRestored = true;
-      } catch {}
-      throw new Error(`Mail SSL failed: ${err?.message || "Unknown error"}. ${sslRestored ? "Web SSL was restored." : "Please re-request web SSL manually."}`);
+      throw new Error("SSL certificate request failed. Check that the domain resolves to the server IP.");
     }
   }
 
