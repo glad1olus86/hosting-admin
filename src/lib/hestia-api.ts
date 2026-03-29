@@ -176,7 +176,8 @@ export async function deleteDomain(user: string, domain: string) {
 }
 
 export async function addLetsEncrypt(user: string, domain: string) {
-  await hestiaCommand("v-add-letsencrypt-domain", user, domain);
+  // Request LE cert for web + mail (4th arg "yes" = include mail.domain)
+  await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
   // Auto-enable HTTP→HTTPS redirect
   try {
     await hestiaCommand("v-add-web-domain-ssl-force", user, domain);
@@ -572,27 +573,19 @@ export async function unsuspendMailAccount(user: string, domain: string, account
 }
 
 // === MAIL SSL ===
-// Uses web domain's LE certs to enable mail SSL.
-// v-add-mail-domain-ssl expects $ssl_dir/$domain.crt/key/ca (no mail. prefix).
+// Re-requests LE cert for web domain with mail.domain included in SAN.
+// Deletes old cert first, then requests new one with MAIL=yes.
 export async function addLetsEncryptMail(user: string, domain: string) {
-  const { execAsRoot } = await import("@/lib/ssh-client");
-  const webSslDir = `/home/${user}/conf/web/${domain}/ssl`;
-  const tmpDir = `/tmp/mail_ssl_${Date.now()}`;
-
-  const script = [
-    `mkdir -p ${tmpDir}`,
-    `cp ${webSslDir}/${domain}.crt ${tmpDir}/${domain}.crt`,
-    `cp ${webSslDir}/${domain}.key ${tmpDir}/${domain}.key`,
-    `cp ${webSslDir}/${domain}.ca ${tmpDir}/${domain}.ca 2>/dev/null || true`,
-    `/usr/local/hestia/bin/v-add-mail-domain-ssl ${user} ${domain} ${tmpDir} no`,
-    `rm -rf ${tmpDir}`,
-  ].join(" && ");
-
-  const result = await execAsRoot(script);
-  const output = (result.stdout || result.stderr || "").replace(/^\[sudo\].*\n?/, "").trim();
-  if (result.code !== 0 || /^Error:/im.test(output)) {
-    throw new Error(output || "Failed to add mail SSL");
-  }
+  // Delete existing LE cert (ignore errors if none exists)
+  try {
+    await hestiaCommand("v-delete-letsencrypt-domain", user, domain);
+  } catch {}
+  // Request new LE cert with mail subdomain included
+  await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
+  // Re-enable HTTPS redirect
+  try {
+    await hestiaCommand("v-add-web-domain-ssl-force", user, domain);
+  } catch {}
   return { success: true };
 }
 
