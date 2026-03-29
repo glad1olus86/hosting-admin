@@ -8,6 +8,7 @@ import {
   toggleMailAntispam,
   setMailCatchall,
   removeMailCatchall,
+  addLetsEncryptMail,
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
 
@@ -73,6 +74,9 @@ export async function PATCH(request: NextRequest) {
         } else {
           await removeMailCatchall(user, domain);
         }
+        break;
+      case "ssl":
+        await addLetsEncryptMail(user, domain);
         break;
       default:
         return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });

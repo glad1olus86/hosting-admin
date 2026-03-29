@@ -571,6 +571,46 @@ export async function unsuspendMailAccount(user: string, domain: string, account
   await hestiaActionCommand("v-unsuspend-mail-account", user, domain, account);
 }
 
+// === MAIL SSL ===
+export async function addLetsEncryptMail(user: string, domain: string) {
+  await hestiaActionCommand("v-add-letsencrypt-mail", user, domain);
+  return { success: true };
+}
+
+// === MAIL FORWARDING ===
+export async function addMailAccountForward(user: string, domain: string, account: string, forwardEmail: string) {
+  await hestiaActionCommand("v-add-mail-account-forward", user, domain, account, forwardEmail);
+  return { success: true };
+}
+
+export async function deleteMailAccountForward(user: string, domain: string, account: string, forwardEmail: string) {
+  await hestiaActionCommand("v-delete-mail-account-forward", user, domain, account, forwardEmail);
+  return { success: true };
+}
+
+// === MAIL AUTOREPLY ===
+export async function addMailAccountAutoreply(user: string, domain: string, account: string, message: string) {
+  await hestiaActionCommand("v-add-mail-account-autoreply", user, domain, account, message);
+  return { success: true };
+}
+
+export async function deleteMailAccountAutoreply(user: string, domain: string, account: string) {
+  await hestiaActionCommand("v-delete-mail-account-autoreply", user, domain, account);
+  return { success: true };
+}
+
+export async function getMailAccountAutoreply(user: string, domain: string, account: string): Promise<string> {
+  try {
+    const data = await hestiaCommand("v-list-mail-account-autoreply", user, domain, account, "json");
+    if (typeof data === "object" && data !== null) {
+      return data.MSG || data.AUTOREPLY || data.message || "";
+    }
+    return typeof data === "string" ? data : "";
+  } catch {
+    return "";
+  }
+}
+
 // === DNS ===
 export async function listDnsDomains(user: string) {
   const data = await hestiaCommand("v-list-dns-domains", user, "json");

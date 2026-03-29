@@ -7,6 +7,11 @@ import {
   changeMailAccountQuota,
   suspendMailAccount,
   unsuspendMailAccount,
+  addMailAccountForward,
+  deleteMailAccountForward,
+  addMailAccountAutoreply,
+  deleteMailAccountAutoreply,
+  getMailAccountAutoreply,
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, canAccessUser } from "@/lib/auth-guard";
 
@@ -79,6 +84,25 @@ export async function PATCH(request: NextRequest) {
       case "unsuspend":
         await unsuspendMailAccount(user, domain, account);
         break;
+      case "add-forward":
+        if (!value) return NextResponse.json({ error: "Forward email is required" }, { status: 400 });
+        await addMailAccountForward(user, domain, account, value);
+        break;
+      case "delete-forward":
+        if (!value) return NextResponse.json({ error: "Forward email is required" }, { status: 400 });
+        await deleteMailAccountForward(user, domain, account, value);
+        break;
+      case "add-autoreply":
+        if (!value) return NextResponse.json({ error: "Autoreply message is required" }, { status: 400 });
+        await addMailAccountAutoreply(user, domain, account, value);
+        break;
+      case "delete-autoreply":
+        await deleteMailAccountAutoreply(user, domain, account);
+        break;
+      case "get-autoreply": {
+        const msg = await getMailAccountAutoreply(user, domain, account);
+        return NextResponse.json({ message: msg });
+      }
       default:
         return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
     }
