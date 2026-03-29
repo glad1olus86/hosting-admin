@@ -5,6 +5,7 @@ import {
   addWebDomainOnly,
   deleteDomain,
   addLetsEncrypt,
+  deleteLetsEncrypt,
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
 
@@ -51,7 +52,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { user, domain } = body;
+    const { user, domain, action } = body;
     if (!user || !domain) {
       return NextResponse.json({ error: "User and domain required" }, { status: 400 });
     }
@@ -61,7 +62,11 @@ export async function PATCH(request: NextRequest) {
     if (HIDDEN_DOMAINS.includes(domain)) {
       return NextResponse.json({ error: "This domain is protected" }, { status: 403 });
     }
-    await addLetsEncrypt(user, domain);
+    if (action === "revoke-ssl") {
+      await deleteLetsEncrypt(user, domain);
+    } else {
+      await addLetsEncrypt(user, domain);
+    }
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

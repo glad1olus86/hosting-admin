@@ -603,7 +603,9 @@ export async function addLetsEncryptMail(user: string, domain: string) {
   try {
     await hestiaCommand("v-delete-letsencrypt-domain", user, domain);
   } catch {}
+
   // Try requesting cert with mail
+  let sslRestored = false;
   try {
     await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
   } catch (err: any) {
@@ -612,22 +614,41 @@ export async function addLetsEncryptMail(user: string, domain: string) {
       // Auto-create mail.{domain} DNS record and mail domain, then retry
       const domainInfo = await hestiaCommand("v-list-web-domain", user, domain, "json");
       const ip = domainInfo?.[domain]?.IP || "116.202.219.165";
-      // Ensure DNS zone exists
       try { await hestiaCommand("v-add-dns-domain", user, domain); } catch {}
-      // Add mail A record
       try { await hestiaActionCommand("v-add-dns-record", user, domain, "mail", "A", ip); } catch {}
-      // Ensure mail domain exists
       try { await hestiaActionCommand("v-add-mail-domain", user, domain); } catch {}
       try { await hestiaActionCommand("v-add-mail-domain-dkim", user, domain); } catch {}
-      // Retry SSL with mail
-      await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
+      try {
+        await hestiaCommand("v-add-letsencrypt-domain", user, domain, "", "yes");
+      } catch (retryErr: any) {
+        // Retry failed — restore web-only SSL so site isn't left without cert
+        try {
+          await hestiaCommand("v-add-letsencrypt-domain", user, domain);
+          sslRestored = true;
+        } catch {}
+        throw new Error(`Mail SSL failed: ${retryErr?.message || "Unknown error"}. ${sslRestored ? "Web SSL was restored." : "Please re-request web SSL manually."}`);
+      }
     } else {
-      throw err;
+      // Non-DNS error — restore web-only SSL
+      try {
+        await hestiaCommand("v-add-letsencrypt-domain", user, domain);
+        sslRestored = true;
+      } catch {}
+      throw new Error(`Mail SSL failed: ${err?.message || "Unknown error"}. ${sslRestored ? "Web SSL was restored." : "Please re-request web SSL manually."}`);
     }
   }
+
   // Re-enable HTTPS redirect
   try {
     await hestiaCommand("v-add-web-domain-ssl-force", user, domain);
+  } catch {}
+  return { success: true };
+}
+
+export async function deleteLetsEncrypt(user: string, domain: string) {
+  await hestiaCommand("v-delete-letsencrypt-domain", user, domain);
+  try {
+    await hestiaCommand("v-delete-web-domain-ssl-force", user, domain);
   } catch {}
   return { success: true };
 }

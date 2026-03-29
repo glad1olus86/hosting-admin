@@ -209,6 +209,9 @@ export default function DomainPage() {
   // SSL
   const [sslRequesting, setSslRequesting] = useState(false);
   const [mailSslRequesting, setMailSslRequesting] = useState(false);
+  const [sslRevoking, setSslRevoking] = useState(false);
+  const [sslError, setSslError] = useState<string | null>(null);
+  const [sslSuccess, setSslSuccess] = useState<string | null>(null);
 
   // SETTINGS
   const [templates, setTemplates] = useState<Templates | null>(null);
@@ -719,25 +722,45 @@ export default function DomainPage() {
 
   const handleRequestSsl = async () => {
     setSslRequesting(true);
+    setSslError(null);
+    setSslSuccess(null);
     try {
       const res = await fetch("/api/domains", { method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user, domain }) });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "SSL error");
+      setSslSuccess("SSL certificate issued successfully");
       await fetchDomainInfo();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { setSslError(err.message); }
     finally { setSslRequesting(false); }
   };
   const handleRequestMailSsl = async () => {
     setMailSslRequesting(true);
+    setSslError(null);
+    setSslSuccess(null);
     try {
       const res = await fetch("/api/mail", { method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user, domain, action: "ssl" }) });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Mail SSL error");
+      setSslSuccess("Mail SSL certificate issued successfully");
       await fetchDomainInfo();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { setSslError(err.message); }
     finally { setMailSslRequesting(false); }
+  };
+  const handleRevokeSsl = async () => {
+    setSslRevoking(true);
+    setSslError(null);
+    setSslSuccess(null);
+    try {
+      const res = await fetch("/api/domains", { method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user, domain, action: "revoke-ssl" }) });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Revoke error");
+      setSslSuccess("SSL certificate revoked");
+      await fetchDomainInfo();
+    } catch (err: any) { setSslError(err.message); }
+    finally { setSslRevoking(false); }
   };
 
   // SETTINGS HELPERS
@@ -1245,6 +1268,28 @@ export default function DomainPage() {
       {activeTab === "SSL" && (
         <>
           <h2 className="text-lg font-semibold text-[#134E4A]">SSL Certificate</h2>
+          {/* Status / Error / Success messages */}
+          {sslError && (
+            <GlassCard className="p-4 border-red-200 bg-red-50/70">
+              <div className="flex items-start gap-2">
+                <ShieldOff className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-red-700">SSL Error</p>
+                  <p className="text-xs text-red-600 mt-1 break-all">{sslError}</p>
+                </div>
+                <button onClick={() => setSslError(null)} className="ml-auto text-red-400 hover:text-red-600 cursor-pointer">&times;</button>
+              </div>
+            </GlassCard>
+          )}
+          {sslSuccess && (
+            <GlassCard className="p-4 border-emerald-200 bg-emerald-50/70">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                <p className="text-sm text-emerald-700">{sslSuccess}</p>
+                <button onClick={() => setSslSuccess(null)} className="ml-auto text-emerald-400 hover:text-emerald-600 cursor-pointer">&times;</button>
+              </div>
+            </GlassCard>
+          )}
           <GlassCard className="p-5">
             <div className="flex items-center gap-3 mb-4">
               {hasSSL ? (
@@ -1263,14 +1308,27 @@ export default function DomainPage() {
               </div>
             )}
             <div className="flex flex-wrap gap-2">
-              <Button className="bg-teal-600 text-white hover:bg-teal-700 cursor-pointer" disabled={sslRequesting} onClick={handleRequestSsl}>
-                {sslRequesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-                {hasSSL ? "Renew SSL" : "Request Let's Encrypt"}
-              </Button>
-              <Button variant="outline" className="cursor-pointer" disabled={mailSslRequesting} onClick={handleRequestMailSsl}>
-                {mailSslRequesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                Enable Mail SSL
-              </Button>
+              {!hasSSL ? (
+                <Button className="bg-teal-600 text-white hover:bg-teal-700 cursor-pointer" disabled={sslRequesting} onClick={handleRequestSsl}>
+                  {sslRequesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                  Request Let&apos;s Encrypt
+                </Button>
+              ) : (
+                <>
+                  <Button className="bg-teal-600 text-white hover:bg-teal-700 cursor-pointer" disabled={sslRequesting} onClick={handleRequestSsl}>
+                    {sslRequesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    Renew SSL
+                  </Button>
+                  <Button variant="outline" className="cursor-pointer" disabled={mailSslRequesting} onClick={handleRequestMailSsl}>
+                    {mailSslRequesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                    Enable Mail SSL
+                  </Button>
+                  <Button variant="outline" className="cursor-pointer text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" disabled={sslRevoking} onClick={handleRevokeSsl}>
+                    {sslRevoking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldOff className="h-4 w-4" />}
+                    Revoke Certificate
+                  </Button>
+                </>
+              )}
             </div>
           </GlassCard>
         </>
