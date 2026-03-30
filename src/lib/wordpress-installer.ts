@@ -37,14 +37,11 @@ function updateJob(jobId: string, update: Partial<WpJobStatus>) {
   }
 }
 
-function generateDbCredentials(user: string) {
+function generateDbCredentials(user: string, adminPassword: string) {
   const suffix = Math.random().toString(36).slice(2, 8);
   const dbName = `wp_${suffix}`;
   const dbUser = `wp_${suffix}`;
-  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let dbPass = "";
-  for (let i = 0; i < 16; i++) dbPass += chars[Math.floor(Math.random() * chars.length)];
-  return { dbName, dbUser, dbPass };
+  return { dbName, dbUser, dbPass: adminPassword };
 }
 
 export async function installWordPress(jobId: string, params: WpInstallParams) {
@@ -72,9 +69,9 @@ export async function installWordPress(jobId: string, params: WpInstallParams) {
       await execAsRoot(`/usr/local/hestia/bin/v-add-user-wp-cli ${user}`);
     }
 
-    // Step 2: Create database
+    // Step 2: Create database (DB password = WP admin password)
     updateJob(jobId, { step: 2, message: "Creating database..." });
-    const { dbName, dbUser, dbPass } = generateDbCredentials(user);
+    const { dbName, dbUser, dbPass } = generateDbCredentials(user, admin_password);
     await addDatabase(user, dbName, dbUser, dbPass, "mysql");
     const fullDbName = `${user}_${dbName}`;
     const fullDbUser = `${user}_${dbUser}`;

@@ -6,8 +6,31 @@ import {
   changeDatabasePassword,
   suspendDatabase,
   unsuspendDatabase,
+  listAllDomains,
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
+import { execAsRoot } from "@/lib/ssh-client";
+
+// Update wp-config.php DB_PASSWORD in all domains of a user where this DB is used
+async function updateWpConfigs(user: string, dbName: string, newPassword: string) {
+  try {
+    // Find all wp-config.php files for this user that reference this database
+    const escaped = newPassword.replace(/'/g, "'\\''");
+    const fullDbName = dbName.includes("_") ? dbName : `${user}_${dbName}`;
+    // Search all domains for wp-config.php that uses this DB
+    const findResult = await execAsRoot(
+      `grep -rl "define.*DB_NAME.*${fullDbName}" /home/${user}/web/*/public_html/wp-config.php 2>/dev/null || true`
+    );
+    const files = findResult.stdout.trim().split("\n").filter(Boolean);
+    for (const file of files) {
+      await execAsRoot(
+        `sed -i "s/define(\\s*'DB_PASSWORD'\\s*,\\s*'[^']*'/define('DB_PASSWORD', '${escaped}'/" ${file}`
+      );
+    }
+  } catch {
+    // Non-critical — don't fail the password change
+  }
+}
 
 export async function GET() {
   const auth = await requireAuth();
@@ -67,6 +90,8 @@ export async function PATCH(request: NextRequest) {
           return NextResponse.json({ error: "Password is required" }, { status: 400 });
         }
         await changeDatabasePassword(user, db_name, password);
+        // Auto-update wp-config.php if WordPress uses this DB
+        await updateWpConfigs(user, db_name, password);
         break;
       case "suspend":
         await suspendDatabase(user, db_name);

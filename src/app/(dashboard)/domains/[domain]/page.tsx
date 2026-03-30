@@ -210,6 +210,16 @@ export default function DomainPage() {
   const [dbDeleteLoading, setDbDeleteLoading] = useState(false);
   const [dbActionLoading, setDbActionLoading] = useState<Record<string, boolean>>({});
 
+  // WordPress admin
+  const [wpInstalled, setWpInstalled] = useState<boolean | null>(null);
+  const [wpAdmins, setWpAdmins] = useState<{ ID: string; user_login: string; user_email: string }[]>([]);
+  const [wpEditOpen, setWpEditOpen] = useState(false);
+  const [wpEditTarget, setWpEditTarget] = useState<{ ID: string; user_login: string; user_email: string } | null>(null);
+  const [wpNewUsername, setWpNewUsername] = useState("");
+  const [wpNewPassword, setWpNewPassword] = useState("");
+  const [showWpNewPw, setShowWpNewPw] = useState(false);
+  const [wpSaving, setWpSaving] = useState(false);
+
   // SSL
   const [sslRequesting, setSslRequesting] = useState(false);
   const [mailSslRequesting, setMailSslRequesting] = useState(false);
@@ -340,6 +350,16 @@ export default function DomainPage() {
     } catch {}
   }, []);
 
+  const fetchWpStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/wordpress/admin?user=${encodeURIComponent(user)}&domain=${encodeURIComponent(domain)}`);
+      const data = await res.json();
+      if (data.error) return;
+      setWpInstalled(data.installed);
+      if (data.admins) setWpAdmins(data.admins);
+    } catch {}
+  }, [user, domain]);
+
   // ── Domain action helper ──
   const domainAction = useCallback(async (action: string, extraParams: Record<string, string> = {}) => {
     if (!domainInfo) return false;
@@ -378,6 +398,7 @@ export default function DomainPage() {
     if (loadedTabs.has(activeTab)) return;
     setLoadedTabs((prev) => new Set(prev).add(activeTab));
     switch (activeTab) {
+      case "Overview": fetchWpStatus(); break;
       case "Files":
         if (!currentPath) setCurrentPath(basePath);
         fetchFiles(basePath);
@@ -388,7 +409,7 @@ export default function DomainPage() {
       case "Databases": fetchDatabases(); break;
       case "Settings": fetchTemplates(); break;
     }
-  }, [activeTab, loadedTabs, basePath, currentPath, fetchFiles, fetchFtp, fetchDns, fetchMail, fetchDatabases, fetchTemplates]);
+  }, [activeTab, loadedTabs, basePath, currentPath, fetchFiles, fetchFtp, fetchDns, fetchMail, fetchDatabases, fetchTemplates, fetchWpStatus]);
 
   // Refetch files when path changes
   useEffect(() => {
@@ -941,6 +962,55 @@ export default function DomainPage() {
               </button>
             ))}
           </div>
+
+          {/* WordPress Admin — only if WP is detected */}
+          {wpInstalled && wpAdmins.length > 0 && (
+            <>
+              <h3 className="text-lg font-semibold text-[#134E4A]">WordPress</h3>
+              <GlassCard className="p-5">
+                <div className="space-y-3">
+                  {wpAdmins.map((admin) => (
+                    <div key={admin.ID} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                          <KeyRound className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-[#134E4A]">{admin.user_login}</p>
+                          <p className="text-xs text-muted-foreground">{admin.user_email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="cursor-pointer"
+                          onClick={() => window.open(`https://${domain}/wp-admin/`, "_blank")}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          wp-admin
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="bg-teal-600 text-white hover:bg-teal-700 cursor-pointer"
+                          onClick={() => {
+                            setWpEditTarget(admin);
+                            setWpNewUsername(admin.user_login);
+                            setWpNewPassword("");
+                            setShowWpNewPw(false);
+                            setWpEditOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </GlassCard>
+            </>
+          )}
         </>
       )}
 
@@ -1936,6 +2006,87 @@ export default function DomainPage() {
             <DialogClose render={<Button variant="outline" className="cursor-pointer" />}>Cancel</DialogClose>
             <Button variant="destructive" className="cursor-pointer" disabled={dbDeleteLoading} onClick={handleDbDelete}>
               {dbDeleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── WordPress Admin Edit ── */}
+      <Dialog open={wpEditOpen} onOpenChange={setWpEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-amber-500" />
+              WordPress Admin
+            </DialogTitle>
+            <DialogDescription>
+              Change credentials for <strong>{wpEditTarget?.user_login}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label>Username</Label>
+              <Input
+                value={wpNewUsername}
+                onChange={(e) => setWpNewUsername(e.target.value)}
+                placeholder="admin"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>New Password</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type={showWpNewPw ? "text" : "password"}
+                    value={wpNewPassword}
+                    onChange={(e) => setWpNewPassword(e.target.value)}
+                    placeholder="Leave empty to keep current"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    onClick={() => setShowWpNewPw(!showWpNewPw)}
+                  >
+                    {showWpNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <Button variant="outline" size="sm" className="cursor-pointer shrink-0" onClick={() => { setWpNewPassword(generatePassword()); setShowWpNewPw(true); }}>
+                  Generate
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button
+              className="bg-teal-600 text-white hover:bg-teal-700 cursor-pointer"
+              disabled={wpSaving || (!wpNewPassword && wpNewUsername === wpEditTarget?.user_login)}
+              onClick={async () => {
+                if (!wpEditTarget) return;
+                setWpSaving(true);
+                try {
+                  const body: any = { user, domain, wpUserId: wpEditTarget.ID };
+                  if (wpNewUsername && wpNewUsername !== wpEditTarget.user_login) body.newUsername = wpNewUsername;
+                  if (wpNewPassword) body.newPassword = wpNewPassword;
+                  const res = await fetch("/api/wordpress/admin", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                  });
+                  const data = await res.json();
+                  if (!res.ok || data.error) throw new Error(data.error || "Failed");
+                  toast.success("WordPress credentials updated");
+                  setWpEditOpen(false);
+                  fetchWpStatus();
+                } catch (err: any) {
+                  toast.error(err.message);
+                } finally {
+                  setWpSaving(false);
+                }
+              }}
+            >
+              {wpSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
