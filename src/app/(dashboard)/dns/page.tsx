@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useToast } from "@/contexts/toast-context";
 import {
   Plus,
   Trash2,
@@ -85,6 +86,7 @@ type RecordForm = {
 const emptyForm: RecordForm = { record: "", type: "A", value: "", priority: "", ttl: "14400" };
 
 export default function DnsPage() {
+  const { toast } = useToast();
   const [zones, setZones] = useState<DnsZone[]>([]);
   const [zonesLoading, setZonesLoading] = useState(true);
   const [zonesError, setZonesError] = useState<string | null>(null);
@@ -180,7 +182,7 @@ export default function DnsPage() {
 
   const handleSubmitForm = async () => {
     if (!selectedZone || !form.record || !form.type || !form.value) {
-      alert("Please fill in all required fields.");
+      toast.error("Please fill in all required fields.");
       return;
     }
     setFormLoading(true);
@@ -218,7 +220,7 @@ export default function DnsPage() {
       setForm(emptyForm);
       await fetchRecords(selectedZone.user, selectedZone.domain);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setFormLoading(false);
     }
@@ -238,7 +240,7 @@ export default function DnsPage() {
       setDeleteTarget(null);
       await fetchRecords(selectedZone.user, selectedZone.domain);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setDeleteLoading(false);
     }
@@ -262,7 +264,7 @@ export default function DnsPage() {
       }
       await fetchZones();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setDeleteZoneLoading(false);
     }

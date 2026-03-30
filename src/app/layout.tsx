@@ -3,6 +3,8 @@ import { Inter, Fira_Code } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/auth-context";
+import { ToastProvider } from "@/contexts/toast-context";
+import { ConfirmProvider } from "@/contexts/confirm-context";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,7 +35,11 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-gradient-to-br from-[#F0FDFA] via-white to-[#CCFBF1]">
         <AuthProvider>
-          <TooltipProvider>{children}</TooltipProvider>
+          <ToastProvider>
+            <ConfirmProvider>
+              <TooltipProvider>{children}</TooltipProvider>
+            </ConfirmProvider>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

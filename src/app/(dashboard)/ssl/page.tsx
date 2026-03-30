@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useToast } from "@/contexts/toast-context";
 import {
   Lock,
   Unlock,
@@ -70,6 +71,7 @@ function getExpiryColorClass(expiryDate: string): string {
 }
 
 export default function SslPage() {
+  const { toast } = useToast();
   const [certificates, setCertificates] = useState<SslCertificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +121,7 @@ export default function SslPage() {
         throw new Error(data.error || "Failed to issue SSL certificate");
       await fetchCertificates();
     } catch (err: any) {
-      alert(err.message || "Failed to issue SSL certificate");
+      toast.error(err.message || "Failed to issue SSL certificate");
     } finally {
       setIssuingDomain(null);
     }
@@ -139,7 +141,7 @@ export default function SslPage() {
         throw new Error(data.error || "Failed to renew SSL certificate");
       await fetchCertificates();
     } catch (err: any) {
-      alert(err.message || "Failed to renew SSL certificate");
+      toast.error(err.message || "Failed to renew SSL certificate");
     } finally {
       setRenewingDomain(null);
     }
@@ -160,7 +162,7 @@ export default function SslPage() {
       setRemoveTarget(null);
       await fetchCertificates();
     } catch (err: any) {
-      alert(err.message || "Failed to remove SSL certificate");
+      toast.error(err.message || "Failed to remove SSL certificate");
     } finally {
       setRemoveLoading(false);
     }

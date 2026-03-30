@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useToast } from "@/contexts/toast-context";
 import {
   Folder,
   File,
@@ -52,6 +53,7 @@ interface HestiaUser {
 }
 
 export default function FilesPage() {
+  const { toast } = useToast();
   const [users, setUsers] = useState<HestiaUser[]>([]);
   const [selectedUser, setSelectedUser] = useState("");
   const [currentPath, setCurrentPath] = useState("");
@@ -179,7 +181,7 @@ export default function FilesPage() {
       setNewFolderName("");
       await fetchFiles();
     } catch (err: any) {
-      alert(err.message || "Failed to create folder");
+      toast.error(err.message || "Failed to create folder");
     } finally {
       setMkdirLoading(false);
     }
@@ -201,7 +203,7 @@ export default function FilesPage() {
       setDeleteTarget(null);
       await fetchFiles();
     } catch (err: any) {
-      alert(err.message || "Failed to delete");
+      toast.error(err.message || "Failed to delete");
     } finally {
       setDeleteLoading(false);
     }
@@ -225,7 +227,7 @@ export default function FilesPage() {
       }
       await fetchFiles();
     } catch (err: any) {
-      alert(err.message || "Failed to upload file");
+      toast.error(err.message || "Failed to upload file");
     } finally {
       setUploadLoading(false);
     }

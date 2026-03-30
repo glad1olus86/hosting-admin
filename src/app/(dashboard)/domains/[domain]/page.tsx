@@ -29,6 +29,8 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/contexts/toast-context";
+import { useConfirm } from "@/contexts/confirm-context";
 
 /* ═══════════════════════ Interfaces ═══════════════════════ */
 
@@ -103,6 +105,8 @@ export default function DomainPage() {
   const searchParams = useSearchParams();
   const domain = decodeURIComponent(params.domain || "");
   const user = searchParams.get("user") || "";
+  const { toast } = useToast();
+  const confirm = useConfirm();
 
   const [domainInfo, setDomainInfo] = useState<HestiaDomain | null>(null);
   const [domainLoading, setDomainLoading] = useState(true);
@@ -351,7 +355,7 @@ export default function DomainPage() {
       await fetchDomainInfo();
       return true;
     } catch (err: any) {
-      alert(err.message || "Action failed");
+      toast.error(err.message || "Action failed");
       return false;
     } finally {
       setActionLoading(null);
@@ -437,7 +441,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setMkdirOpen(false); setNewFolderName(""); await fetchFiles(currentPath);
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setMkdirLoading(false); }
   };
   const handleFileDelete = async () => {
@@ -450,7 +454,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setFileDeleteOpen(false); setFileDeleteTarget(null); await fetchFiles(currentPath);
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setFileDeleteLoading(false); }
   };
   const handleUploadFiles = async (fileList: FileList) => {
@@ -464,14 +468,14 @@ export default function DomainPage() {
         if (data.error) throw new Error(data.error);
       }
       await fetchFiles(currentPath);
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setUploadLoading(false); }
   };
 
   // ══════════════════ FTP HANDLERS ══════════════════
 
   const handleFtpCreate = async () => {
-    if (!ftpCreateForm.ftp_user || !ftpCreateForm.password) { alert("Fill in all fields."); return; }
+    if (!ftpCreateForm.ftp_user || !ftpCreateForm.password) { toast.error("Fill in all fields."); return; }
     setFtpCreateLoading(true);
     try {
       const res = await fetch("/api/ftp", { method: "POST", headers: { "Content-Type": "application/json" },
@@ -479,7 +483,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setFtpCreateOpen(false); setFtpCreateForm({ ftp_user: "", password: "" }); setShowFtpCreatePw(false); await fetchFtp();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setFtpCreateLoading(false); }
   };
   const handleFtpChangePw = async () => {
@@ -491,7 +495,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setFtpPwOpen(false); setFtpPwTarget(null); setFtpNewPw("");
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setFtpPwLoading(false); }
   };
   const handleFtpDelete = async () => {
@@ -502,7 +506,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setFtpDeleteOpen(false); setFtpDeleteTarget(null); await fetchFtp();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setFtpDeleteLoading(false); }
   };
 
@@ -515,7 +519,7 @@ export default function DomainPage() {
     setDnsFormOpen(true);
   };
   const handleDnsSubmit = async () => {
-    if (!dnsForm.record || !dnsForm.type || !dnsForm.value) { alert("Fill required fields."); return; }
+    if (!dnsForm.record || !dnsForm.type || !dnsForm.value) { toast.error("Fill required fields."); return; }
     setDnsFormLoading(true);
     try {
       const body: any = { user, domain, record: dnsForm.record, type: dnsForm.type, value: dnsForm.value, priority: dnsForm.priority || undefined, ttl: dnsForm.ttl || undefined };
@@ -530,7 +534,7 @@ export default function DomainPage() {
         if (!res.ok || data.error) throw new Error(data.error || "Failed");
       }
       setDnsFormOpen(false); await fetchDns();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setDnsFormLoading(false); }
   };
   const handleDnsDelete = async () => {
@@ -541,7 +545,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setDnsDeleteOpen(false); setDnsDeleteTarget(null); await fetchDns();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setDnsDeleteLoading(false); }
   };
   const dnsShowPriority = dnsForm.type === "MX" || dnsForm.type === "SRV";
@@ -556,7 +560,7 @@ export default function DomainPage() {
   // MAIL HANDLERS
 
   const handleMailCreate = async () => {
-    if (!mailCreateForm.account || !mailCreateForm.password) { alert("Fill in all fields."); return; }
+    if (!mailCreateForm.account || !mailCreateForm.password) { toast.error("Fill in all fields."); return; }
     setMailCreateLoading(true);
     try {
       const res = await fetch("/api/mail/accounts", { method: "POST", headers: { "Content-Type": "application/json" },
@@ -564,7 +568,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setMailCreateOpen(false); setMailCreateForm({ account: "", password: "" }); await fetchMail();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setMailCreateLoading(false); }
   };
   const handleMailDelete = async () => {
@@ -575,7 +579,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setMailDeleteOpen(false); setMailDeleteTarget(null); await fetchMail();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setMailDeleteLoading(false); }
   };
   const handleMailPwChange = async () => {
@@ -587,7 +591,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setMailPwOpen(false); setMailPwTarget(null); setMailNewPw("");
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setMailPwLoading(false); }
   };
   const handleMailSuspendToggle = async (a: MailAccount) => {
@@ -598,7 +602,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error);
       await fetchMail();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
   };
   const openMailSheet = (a: MailAccount) => {
     setMailSheetAccount(a); setMailSheetTab("info"); setNewFwdEmail(""); setArMsg(""); setArFetched(false); setMailSheetOpen(true);
@@ -616,7 +620,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setNewFwdEmail(""); await refreshMailSheet();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setFwdLoading(false); }
   };
   const handleDeleteFwd = async (fwd: string) => {
@@ -628,7 +632,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       await refreshMailSheet();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setFwdLoading(false); }
   };
   const fetchAutoreply = async (account: MailAccount) => {
@@ -651,7 +655,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       await refreshMailSheet();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setArLoading(false); }
   };
   const handleDeleteAutoreply = async () => {
@@ -663,14 +667,14 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setArMsg(""); await refreshMailSheet();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setArLoading(false); }
   };
 
   // DATABASE HANDLERS
 
   const handleDbCreate = async () => {
-    if (!dbCreateForm.db_name || !dbCreateForm.db_user || !dbCreateForm.db_password) { alert("Fill all fields."); return; }
+    if (!dbCreateForm.db_name || !dbCreateForm.db_user || !dbCreateForm.db_password) { toast.error("Fill all fields."); return; }
     setDbCreateLoading(true);
     try {
       const res = await fetch("/api/databases", { method: "POST", headers: { "Content-Type": "application/json" },
@@ -678,7 +682,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setDbCreateOpen(false); setDbCreateForm({ db_name: "", db_user: "", db_password: "", type: "mysql" }); await fetchDatabases();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setDbCreateLoading(false); }
   };
   const handleDbDelete = async () => {
@@ -689,7 +693,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setDbDeleteOpen(false); setDbDeleteTarget(null); await fetchDatabases();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setDbDeleteLoading(false); }
   };
   const handleDbChangePw = async () => {
@@ -701,7 +705,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setDbPwOpen(false); setDbPwTarget(null); setDbNewPw("");
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setDbPwLoading(false); }
   };
   const handleDbToggleSuspend = async (db: HestiaDatabase) => {
@@ -714,7 +718,7 @@ export default function DomainPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       await fetchDatabases();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setDbActionLoading((prev) => ({ ...prev, [key]: false })); }
   };
 
@@ -775,7 +779,7 @@ export default function DomainPage() {
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setDeleteDialogOpen(false);
       router.push("/domains");
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setDeleteDomainLoading(false); }
   };
 
@@ -1454,7 +1458,7 @@ export default function DomainPage() {
                 </Button>
               ) : (
                 <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 cursor-pointer" disabled={actionLoading === "suspend"}
-                  onClick={() => { if (confirm(`Suspend ${domain}?`)) domainAction("suspend"); }}>
+                  onClick={async () => { if (await confirm({ title: "Suspend domain", description: `Are you sure you want to suspend ${domain}?`, variant: "destructive", confirmLabel: "Suspend" })) domainAction("suspend"); }}>
                   {actionLoading === "suspend" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />} Suspend Domain
                 </Button>
               )}

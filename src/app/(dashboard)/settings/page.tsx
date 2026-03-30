@@ -53,6 +53,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/auth-context";
+import { useToast } from "@/contexts/toast-context";
+import { useConfirm } from "@/contexts/confirm-context";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────
@@ -100,6 +102,8 @@ interface HestiaUser {
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
+  const { toast } = useToast();
+  const confirm = useConfirm();
   const isAdmin = user?.role === "admin";
 
   // ── Account Settings ──────────────────────────────────
@@ -396,7 +400,7 @@ export default function SettingsPage() {
       });
       fetchFirewall();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setAddRuleSaving(false);
     }
@@ -414,7 +418,7 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(data.error || "Failed");
       fetchFirewall();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setDeleteRuleLoading(null);
     }
@@ -512,14 +516,20 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(data.error || "Failed");
       fetchAccounts();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSuspendLoading(null);
     }
   }
 
   async function handleDeleteAccount(acc: DashboardAccountInfo) {
-    if (!confirm(`Delete account "${acc.username}"? This cannot be undone.`)) return;
+    const ok = await confirm({
+      title: "Delete Account",
+      description: `Delete account "${acc.username}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setDeleteAccountLoading(acc.id);
     try {
       const res = await fetch("/api/accounts", {
@@ -531,7 +541,7 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(data.error || "Failed");
       fetchAccounts();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setDeleteAccountLoading(null);
     }

@@ -65,6 +65,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/contexts/toast-context";
 
 interface MailDomain {
   domain: string;
@@ -98,6 +99,7 @@ interface HestiaUser {
 }
 
 export default function MailPage() {
+  const { toast } = useToast();
   const [domains, setDomains] = useState<MailDomain[]>([]);
   const [users, setUsers] = useState<HestiaUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -227,7 +229,7 @@ export default function MailPage() {
         if (updated) setSelectedDomain(updated);
       }
     } catch (err: any) {
-      alert(`Failed to toggle ${action}: ${err.message}`);
+      toast.error(`Failed to toggle ${action}: ${err.message}`);
     } finally {
       setToggling((prev) => { const n = new Set(prev); n.delete(key); return n; });
     }
@@ -235,7 +237,7 @@ export default function MailPage() {
 
   // Add mail domain
   const handleAddDomain = async () => {
-    if (!addDomainForm.user || !addDomainForm.domain) { alert("Please fill in all fields."); return; }
+    if (!addDomainForm.user || !addDomainForm.domain) { toast.error("Please fill in all fields."); return; }
     setAddDomainLoading(true);
     try {
       const res = await fetch("/api/mail", {
@@ -248,7 +250,7 @@ export default function MailPage() {
       setAddDomainOpen(false);
       setAddDomainForm({ user: "", domain: "" });
       await fetchDomains();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setAddDomainLoading(false); }
   };
 
@@ -263,12 +265,12 @@ export default function MailPage() {
       setDeleteDomainTarget(null);
       if (selectedDomain?.domain === deleteDomainTarget.domain) { setSelectedDomain(null); setAccounts([]); }
       await fetchDomains();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setDeleteDomainLoading(false); }
   };
 
   const handleAddAccount = async () => {
-    if (!selectedDomain || !addAccountForm.account || !addAccountForm.password) { alert("Please fill in all fields."); return; }
+    if (!selectedDomain || !addAccountForm.account || !addAccountForm.password) { toast.error("Please fill in all fields."); return; }
     setAddAccountLoading(true);
     try {
       const res = await fetch("/api/mail/accounts", {
@@ -285,7 +287,7 @@ export default function MailPage() {
       setAddAccountForm({ account: "", password: "", quota: "unlimited" });
       await fetchAccounts(selectedDomain.user, selectedDomain.domain);
       await fetchDomains();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setAddAccountLoading(false); }
   };
 
@@ -299,12 +301,12 @@ export default function MailPage() {
       setDeleteAccountOpen(false);
       setDeleteAccountTarget(null);
       if (selectedDomain) { await fetchAccounts(selectedDomain.user, selectedDomain.domain); await fetchDomains(); }
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setDeleteAccountLoading(false); }
   };
 
   const handleChangePassword = async () => {
-    if (!passwordTarget || !newPassword) { alert("Please enter a new password."); return; }
+    if (!passwordTarget || !newPassword) { toast.error("Please enter a new password."); return; }
     setPasswordLoading(true);
     try {
       const res = await fetch("/api/mail/accounts", {
@@ -317,8 +319,8 @@ export default function MailPage() {
       setPasswordOpen(false);
       setPasswordTarget(null);
       setNewPassword("");
-      alert("Password changed successfully.");
-    } catch (err: any) { alert(err.message); }
+      toast.success("Password changed successfully.");
+    } catch (err: any) { toast.error(err.message); }
     finally { setPasswordLoading(false); }
   };
 
@@ -336,7 +338,7 @@ export default function MailPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error);
       if (selectedDomain) await fetchAccounts(selectedDomain.user, selectedDomain.domain);
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
   };
 
   // === Mail SSL ===
@@ -353,7 +355,7 @@ export default function MailPage() {
       if (!res.ok || data.error) throw new Error(data.error || "SSL error");
       await fetchDomains();
     } catch (err: any) {
-      alert(`Mail SSL error: ${err.message}`);
+      toast.error(`Mail SSL error: ${err.message}`);
     } finally {
       setSslLoading((prev) => { const n = new Set(prev); n.delete(key); return n; });
     }
@@ -393,7 +395,7 @@ export default function MailPage() {
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setNewForwardEmail("");
       await refreshSheetAccount();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setForwardLoading(false); }
   };
 
@@ -412,7 +414,7 @@ export default function MailPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       await refreshSheetAccount();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setForwardLoading(false); }
   };
 
@@ -451,7 +453,7 @@ export default function MailPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       await refreshSheetAccount();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setAutoreplyLoading(false); }
   };
 
@@ -471,7 +473,7 @@ export default function MailPage() {
       if (!res.ok || data.error) throw new Error(data.error || "Failed");
       setAutoreplyMessage("");
       await refreshSheetAccount();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { toast.error(err.message); }
     finally { setAutoreplyLoading(false); }
   };
 

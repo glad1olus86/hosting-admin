@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/auth-context";
+import { useToast } from "@/contexts/toast-context";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -91,6 +92,7 @@ function generatePassword(length = 16): string {
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("system");
 
   // ── System Users state ────────────────────────────────────
@@ -206,7 +208,7 @@ export default function UsersPage() {
 
   const handleAddUser = async () => {
     if (!addForm.username || !addForm.password || !addForm.email) {
-      alert("Please fill in all required fields.");
+      toast.error("Please fill in all required fields.");
       return;
     }
     setAddLoading(true);
@@ -223,7 +225,7 @@ export default function UsersPage() {
       setAddForm({ username: "", password: "", email: "", package_name: "" });
       await fetchUsers();
     } catch (err: any) {
-      alert(err.message || "Failed to add user");
+      toast.error(err.message || "Failed to add user");
     } finally {
       setAddLoading(false);
     }
@@ -244,7 +246,7 @@ export default function UsersPage() {
       setDeleteTarget(null);
       await fetchUsers();
     } catch (err: any) {
-      alert(err.message || "Failed to delete user");
+      toast.error(err.message || "Failed to delete user");
     } finally {
       setDeleteLoading(false);
     }
@@ -269,7 +271,7 @@ export default function UsersPage() {
         throw new Error(data.error || "Failed to update user status");
       await fetchUsers();
     } catch (err: any) {
-      alert(err.message || "Failed to update user status");
+      toast.error(err.message || "Failed to update user status");
     } finally {
       setSuspendLoading(null);
     }
@@ -392,7 +394,7 @@ export default function UsersPage() {
       setEditDialogOpen(false);
       await fetchAccounts();
     } catch (err: any) {
-      alert(err.message || "Failed to update account");
+      toast.error(err.message || "Failed to update account");
     } finally {
       setEditSaving(false);
     }
@@ -414,7 +416,7 @@ export default function UsersPage() {
       setDeleteAccountTarget(null);
       await fetchAccounts();
     } catch (err: any) {
-      alert(err.message || "Failed to delete account");
+      toast.error(err.message || "Failed to delete account");
     } finally {
       setDeleteAccountLoading(false);
     }

@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
+import { useToast } from "@/contexts/toast-context";
 
 interface HestiaDomain {
   domain: string;
@@ -203,6 +204,7 @@ function DomainRows({
 export default function DomainsPage() {
   const router = useRouter();
   const { user: authUser } = useAuth();
+  const { toast } = useToast();
   const domainPattern = authUser?.domainPattern || null;
   // Split pattern into prefix/suffix for pattern-aware input
   const patternParts = domainPattern ? domainPattern.split("%edit%") : null;
@@ -299,11 +301,11 @@ export default function DomainsPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        alert(`SSL error for ${domain}: ${data.error || "Unknown error"}`);
+        toast.error(`SSL error for ${domain}: ${data.error || "Unknown error"}`);
       }
       await fetchDomains();
     } catch (err: any) {
-      alert(`SSL request failed: ${err.message}`);
+      toast.error(`SSL request failed: ${err.message}`);
     } finally {
       setSslLoading((prev) => {
         const next = new Set(prev);
@@ -334,15 +336,12 @@ export default function DomainsPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed to add domain");
-      const wantSsl = addForm.ssl;
-      const domainUser = addForm.user;
       setAddDialogOpen(false);
       const primaryIp = serverIps.length > 0 ? [...serverIps].sort((a, b) => b.domains - a.domains)[0].ip : "";
       setAddForm({ user: "", domain: "", ip: primaryIp, ssl: false, mail: true });
       await fetchDomains();
-      if (wantSsl) requestSsl(domainUser, fullDomain);
     } catch (err: any) {
-      alert(err.message || "Failed to add domain");
+      toast.error(err.message || "Failed to add domain");
     } finally {
       setAddLoading(false);
     }
@@ -362,7 +361,7 @@ export default function DomainsPage() {
       setDeleteTarget(null);
       await fetchDomains();
     } catch (err: any) {
-      alert(err.message || "Failed to delete domain");
+      toast.error(err.message || "Failed to delete domain");
     } finally {
       setDeleteLoading(false);
     }
@@ -644,16 +643,6 @@ export default function DomainsPage() {
                 className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
               />
               <Label htmlFor="add-mail">Enable Mail (creates mail.domain DNS record)</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                id="add-ssl"
-                type="checkbox"
-                checked={addForm.ssl}
-                onChange={(e) => setAddForm((f) => ({ ...f, ssl: e.target.checked }))}
-                className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-              />
-              <Label htmlFor="add-ssl">Enable SSL (Let&apos;s Encrypt)</Label>
             </div>
           </div>
           <DialogFooter>

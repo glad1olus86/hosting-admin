@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useToast } from "@/contexts/toast-context";
 import {
   AreaChart,
   Area,
@@ -123,6 +124,7 @@ const MAX_POINTS = 60;
 // ─── Page ─────────────────────────────────────────────────
 
 export default function ServerPage() {
+  const { toast } = useToast();
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [services, setServices] = useState<ServiceInfo[]>([]);
@@ -317,11 +319,11 @@ export default function ServerPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        alert(data.error || "Failed to manage service");
+        toast.error(data.error || "Failed to manage service");
       }
       await fetchServices();
     } catch {
-      alert("Connection error");
+      toast.error("Connection error");
     } finally {
       setServiceLoading(null);
     }
