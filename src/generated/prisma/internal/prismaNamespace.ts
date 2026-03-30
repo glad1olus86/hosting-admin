@@ -386,6 +386,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   DashboardAccount: 'DashboardAccount',
   AccountSystemUser: 'AccountSystemUser',
+  DomainMeta: 'DomainMeta',
   MetricSnapshot: 'MetricSnapshot'
 } as const
 
@@ -402,7 +403,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "dashboardAccount" | "accountSystemUser" | "metricSnapshot"
+    modelProps: "dashboardAccount" | "accountSystemUser" | "domainMeta" | "metricSnapshot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -538,6 +539,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    DomainMeta: {
+      payload: Prisma.$DomainMetaPayload<ExtArgs>
+      fields: Prisma.DomainMetaFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DomainMetaFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DomainMetaPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DomainMetaFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DomainMetaPayload>
+        }
+        findFirst: {
+          args: Prisma.DomainMetaFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DomainMetaPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DomainMetaFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DomainMetaPayload>
+        }
+        findMany: {
+          args: Prisma.DomainMetaFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DomainMetaPayload>[]
+        }
+        create: {
+          args: Prisma.DomainMetaCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DomainMetaPayload>
+        }
+        createMany: {
+          args: Prisma.DomainMetaCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.DomainMetaDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DomainMetaPayload>
+        }
+        update: {
+          args: Prisma.DomainMetaUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DomainMetaPayload>
+        }
+        deleteMany: {
+          args: Prisma.DomainMetaDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DomainMetaUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.DomainMetaUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DomainMetaPayload>
+        }
+        aggregate: {
+          args: Prisma.DomainMetaAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDomainMeta>
+        }
+        groupBy: {
+          args: Prisma.DomainMetaGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DomainMetaGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DomainMetaCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DomainMetaCountAggregateOutputType> | number
+        }
+      }
+    }
     MetricSnapshot: {
       payload: Prisma.$MetricSnapshotPayload<ExtArgs>
       fields: Prisma.MetricSnapshotFieldRefs
@@ -668,6 +735,18 @@ export const AccountSystemUserScalarFieldEnum = {
 export type AccountSystemUserScalarFieldEnum = (typeof AccountSystemUserScalarFieldEnum)[keyof typeof AccountSystemUserScalarFieldEnum]
 
 
+export const DomainMetaScalarFieldEnum = {
+  id: 'id',
+  domain: 'domain',
+  expirationDate: 'expirationDate',
+  comment: 'comment',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DomainMetaScalarFieldEnum = (typeof DomainMetaScalarFieldEnum)[keyof typeof DomainMetaScalarFieldEnum]
+
+
 export const MetricSnapshotScalarFieldEnum = {
   id: 'id',
   cpu: 'cpu',
@@ -715,6 +794,14 @@ export const AccountSystemUserOrderByRelevanceFieldEnum = {
 } as const
 
 export type AccountSystemUserOrderByRelevanceFieldEnum = (typeof AccountSystemUserOrderByRelevanceFieldEnum)[keyof typeof AccountSystemUserOrderByRelevanceFieldEnum]
+
+
+export const DomainMetaOrderByRelevanceFieldEnum = {
+  domain: 'domain',
+  comment: 'comment'
+} as const
+
+export type DomainMetaOrderByRelevanceFieldEnum = (typeof DomainMetaOrderByRelevanceFieldEnum)[keyof typeof DomainMetaOrderByRelevanceFieldEnum]
 
 
 
@@ -861,6 +948,7 @@ export type PrismaClientOptions = ({
 export type GlobalOmitConfig = {
   dashboardAccount?: Prisma.DashboardAccountOmit
   accountSystemUser?: Prisma.AccountSystemUserOmit
+  domainMeta?: Prisma.DomainMetaOmit
   metricSnapshot?: Prisma.MetricSnapshotOmit
 }
 

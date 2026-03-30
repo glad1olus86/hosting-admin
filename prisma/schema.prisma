@@ -33,6 +33,17 @@ model AccountSystemUser {
   @@map("account_system_users")
 }
 
+model DomainMeta {
+  id             Int       @id @default(autoincrement())
+  domain         String    @unique @db.VarChar(255)
+  expirationDate DateTime? @map("expiration_date") @db.Date
+  comment        String?   @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@map("domain_meta")
+}
+
 model MetricSnapshot {
   id          Int      @id @default(autoincrement())
   cpu         Float

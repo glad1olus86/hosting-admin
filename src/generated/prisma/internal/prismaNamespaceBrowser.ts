@@ -53,6 +53,7 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   DashboardAccount: 'DashboardAccount',
   AccountSystemUser: 'AccountSystemUser',
+  DomainMeta: 'DomainMeta',
   MetricSnapshot: 'MetricSnapshot'
 } as const
 
@@ -95,6 +96,18 @@ export const AccountSystemUserScalarFieldEnum = {
 } as const
 
 export type AccountSystemUserScalarFieldEnum = (typeof AccountSystemUserScalarFieldEnum)[keyof typeof AccountSystemUserScalarFieldEnum]
+
+
+export const DomainMetaScalarFieldEnum = {
+  id: 'id',
+  domain: 'domain',
+  expirationDate: 'expirationDate',
+  comment: 'comment',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DomainMetaScalarFieldEnum = (typeof DomainMetaScalarFieldEnum)[keyof typeof DomainMetaScalarFieldEnum]
 
 
 export const MetricSnapshotScalarFieldEnum = {
@@ -144,4 +157,12 @@ export const AccountSystemUserOrderByRelevanceFieldEnum = {
 } as const
 
 export type AccountSystemUserOrderByRelevanceFieldEnum = (typeof AccountSystemUserOrderByRelevanceFieldEnum)[keyof typeof AccountSystemUserOrderByRelevanceFieldEnum]
+
+
+export const DomainMetaOrderByRelevanceFieldEnum = {
+  domain: 'domain',
+  comment: 'comment'
+} as const
+
+export type DomainMetaOrderByRelevanceFieldEnum = (typeof DomainMetaOrderByRelevanceFieldEnum)[keyof typeof DomainMetaOrderByRelevanceFieldEnum]
 

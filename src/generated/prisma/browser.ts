@@ -28,6 +28,11 @@ export type DashboardAccount = Prisma.DashboardAccountModel
  */
 export type AccountSystemUser = Prisma.AccountSystemUserModel
 /**
+ * Model DomainMeta
+ * 
+ */
+export type DomainMeta = Prisma.DomainMetaModel
+/**
  * Model MetricSnapshot
  * 
  */
