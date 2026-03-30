@@ -11,6 +11,15 @@ import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/
 
 const HIDDEN_DOMAINS = ["host.lamapixel.com", "system.lamapixel.com"];
 
+function validateDomainAgainstPattern(domain: string, pattern: string): boolean {
+  const parts = pattern.split("%edit%");
+  if (parts.length !== 2) return false;
+  const [prefix, suffix] = parts;
+  if (!domain.startsWith(prefix) || !domain.endsWith(suffix)) return false;
+  const middle = domain.slice(prefix.length, domain.length - suffix.length);
+  return middle.length > 0 && /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(middle);
+}
+
 export async function GET() {
   const auth = await requireAuth();
   if (isNextResponse(auth)) return auth;
@@ -33,6 +42,16 @@ export async function POST(request: NextRequest) {
     const { user, domain, ip, mail } = body;
     if (!canAccessUser(auth.allowedUsernames, user)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    // Enforce domain pattern for non-admin users
+    if (auth.user.domainPattern && auth.user.role !== "admin") {
+      if (!validateDomainAgainstPattern(domain, auth.user.domainPattern)) {
+        const display = auth.user.domainPattern.replace("%edit%", "*");
+        return NextResponse.json(
+          { error: `Domain does not match allowed pattern: ${display}` },
+          { status: 403 }
+        );
+      }
     }
     if (mail === false) {
       await addWebDomainOnly(user, domain, ip || undefined);

@@ -14,6 +14,8 @@ export async function GET() {
       username: true,
       email: true,
       role: true,
+      suspended: true,
+      domainPattern: true,
       createdAt: true,
       systemUsers: { select: { hestiaUsername: true } },
     },
@@ -152,6 +154,51 @@ export async function PATCH(request: Request) {
         await prisma.dashboardAccount.update({
           where: { id },
           data: { email: data.email },
+        });
+        break;
+      }
+
+      case "change_username": {
+        if (!data.username || data.username.length < 2) {
+          return NextResponse.json(
+            { error: "Username must be at least 2 characters" },
+            { status: 400 }
+          );
+        }
+        await prisma.dashboardAccount.update({
+          where: { id },
+          data: { username: data.username },
+        });
+        break;
+      }
+
+      case "suspend": {
+        await prisma.dashboardAccount.update({
+          where: { id },
+          data: { suspended: true },
+        });
+        break;
+      }
+
+      case "unsuspend": {
+        await prisma.dashboardAccount.update({
+          where: { id },
+          data: { suspended: false },
+        });
+        break;
+      }
+
+      case "set_domain_pattern": {
+        const pattern = data.domainPattern || null;
+        if (pattern && !pattern.includes("%edit%")) {
+          return NextResponse.json(
+            { error: "Pattern must contain %edit% placeholder" },
+            { status: 400 }
+          );
+        }
+        await prisma.dashboardAccount.update({
+          where: { id },
+          data: { domainPattern: pattern },
         });
         break;
       }

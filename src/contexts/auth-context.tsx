@@ -15,6 +15,7 @@ interface AuthUser {
   username: string;
   email: string;
   role: string;
+  domainPattern: string | null;
   linkedUsers: string[];
 }
 

@@ -40,6 +40,8 @@ export type DashboardAccountMinAggregateOutputType = {
   email: string | null
   passwordHash: string | null
   role: string | null
+  suspended: boolean | null
+  domainPattern: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -50,6 +52,8 @@ export type DashboardAccountMaxAggregateOutputType = {
   email: string | null
   passwordHash: string | null
   role: string | null
+  suspended: boolean | null
+  domainPattern: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -60,6 +64,8 @@ export type DashboardAccountCountAggregateOutputType = {
   email: number
   passwordHash: number
   role: number
+  suspended: number
+  domainPattern: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -80,6 +86,8 @@ export type DashboardAccountMinAggregateInputType = {
   email?: true
   passwordHash?: true
   role?: true
+  suspended?: true
+  domainPattern?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -90,6 +98,8 @@ export type DashboardAccountMaxAggregateInputType = {
   email?: true
   passwordHash?: true
   role?: true
+  suspended?: true
+  domainPattern?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -100,6 +110,8 @@ export type DashboardAccountCountAggregateInputType = {
   email?: true
   passwordHash?: true
   role?: true
+  suspended?: true
+  domainPattern?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -197,6 +209,8 @@ export type DashboardAccountGroupByOutputType = {
   email: string
   passwordHash: string
   role: string
+  suspended: boolean
+  domainPattern: string | null
   createdAt: Date
   updatedAt: Date
   _count: DashboardAccountCountAggregateOutputType | null
@@ -230,6 +244,8 @@ export type DashboardAccountWhereInput = {
   email?: Prisma.StringFilter<"DashboardAccount"> | string
   passwordHash?: Prisma.StringFilter<"DashboardAccount"> | string
   role?: Prisma.StringFilter<"DashboardAccount"> | string
+  suspended?: Prisma.BoolFilter<"DashboardAccount"> | boolean
+  domainPattern?: Prisma.StringNullableFilter<"DashboardAccount"> | string | null
   createdAt?: Prisma.DateTimeFilter<"DashboardAccount"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"DashboardAccount"> | Date | string
   systemUsers?: Prisma.AccountSystemUserListRelationFilter
@@ -241,6 +257,8 @@ export type DashboardAccountOrderByWithRelationInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
   role?: Prisma.SortOrder
+  suspended?: Prisma.SortOrder
+  domainPattern?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   systemUsers?: Prisma.AccountSystemUserOrderByRelationAggregateInput
@@ -256,6 +274,8 @@ export type DashboardAccountWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.DashboardAccountWhereInput | Prisma.DashboardAccountWhereInput[]
   passwordHash?: Prisma.StringFilter<"DashboardAccount"> | string
   role?: Prisma.StringFilter<"DashboardAccount"> | string
+  suspended?: Prisma.BoolFilter<"DashboardAccount"> | boolean
+  domainPattern?: Prisma.StringNullableFilter<"DashboardAccount"> | string | null
   createdAt?: Prisma.DateTimeFilter<"DashboardAccount"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"DashboardAccount"> | Date | string
   systemUsers?: Prisma.AccountSystemUserListRelationFilter
@@ -267,6 +287,8 @@ export type DashboardAccountOrderByWithAggregationInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
   role?: Prisma.SortOrder
+  suspended?: Prisma.SortOrder
+  domainPattern?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.DashboardAccountCountOrderByAggregateInput
@@ -285,6 +307,8 @@ export type DashboardAccountScalarWhereWithAggregatesInput = {
   email?: Prisma.StringWithAggregatesFilter<"DashboardAccount"> | string
   passwordHash?: Prisma.StringWithAggregatesFilter<"DashboardAccount"> | string
   role?: Prisma.StringWithAggregatesFilter<"DashboardAccount"> | string
+  suspended?: Prisma.BoolWithAggregatesFilter<"DashboardAccount"> | boolean
+  domainPattern?: Prisma.StringNullableWithAggregatesFilter<"DashboardAccount"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"DashboardAccount"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"DashboardAccount"> | Date | string
 }
@@ -294,6 +318,8 @@ export type DashboardAccountCreateInput = {
   email: string
   passwordHash: string
   role?: string
+  suspended?: boolean
+  domainPattern?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   systemUsers?: Prisma.AccountSystemUserCreateNestedManyWithoutAccountInput
@@ -305,6 +331,8 @@ export type DashboardAccountUncheckedCreateInput = {
   email: string
   passwordHash: string
   role?: string
+  suspended?: boolean
+  domainPattern?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   systemUsers?: Prisma.AccountSystemUserUncheckedCreateNestedManyWithoutAccountInput
@@ -315,6 +343,8 @@ export type DashboardAccountUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
+  suspended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  domainPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   systemUsers?: Prisma.AccountSystemUserUpdateManyWithoutAccountNestedInput
@@ -326,6 +356,8 @@ export type DashboardAccountUncheckedUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
+  suspended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  domainPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   systemUsers?: Prisma.AccountSystemUserUncheckedUpdateManyWithoutAccountNestedInput
@@ -337,6 +369,8 @@ export type DashboardAccountCreateManyInput = {
   email: string
   passwordHash: string
   role?: string
+  suspended?: boolean
+  domainPattern?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -346,6 +380,8 @@ export type DashboardAccountUpdateManyMutationInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
+  suspended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  domainPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -356,6 +392,8 @@ export type DashboardAccountUncheckedUpdateManyInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
+  suspended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  domainPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -372,6 +410,8 @@ export type DashboardAccountCountOrderByAggregateInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
   role?: Prisma.SortOrder
+  suspended?: Prisma.SortOrder
+  domainPattern?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -386,6 +426,8 @@ export type DashboardAccountMaxOrderByAggregateInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
   role?: Prisma.SortOrder
+  suspended?: Prisma.SortOrder
+  domainPattern?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -396,6 +438,8 @@ export type DashboardAccountMinOrderByAggregateInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
   role?: Prisma.SortOrder
+  suspended?: Prisma.SortOrder
+  domainPattern?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -411,6 +455,14 @@ export type DashboardAccountScalarRelationFilter = {
 
 export type StringFieldUpdateOperationsInput = {
   set?: string
+}
+
+export type BoolFieldUpdateOperationsInput = {
+  set?: boolean
+}
+
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
 }
 
 export type DateTimeFieldUpdateOperationsInput = {
@@ -444,6 +496,8 @@ export type DashboardAccountCreateWithoutSystemUsersInput = {
   email: string
   passwordHash: string
   role?: string
+  suspended?: boolean
+  domainPattern?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -454,6 +508,8 @@ export type DashboardAccountUncheckedCreateWithoutSystemUsersInput = {
   email: string
   passwordHash: string
   role?: string
+  suspended?: boolean
+  domainPattern?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -479,6 +535,8 @@ export type DashboardAccountUpdateWithoutSystemUsersInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
+  suspended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  domainPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -489,6 +547,8 @@ export type DashboardAccountUncheckedUpdateWithoutSystemUsersInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
+  suspended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  domainPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -530,6 +590,8 @@ export type DashboardAccountSelect<ExtArgs extends runtime.Types.Extensions.Inte
   email?: boolean
   passwordHash?: boolean
   role?: boolean
+  suspended?: boolean
+  domainPattern?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   systemUsers?: boolean | Prisma.DashboardAccount$systemUsersArgs<ExtArgs>
@@ -544,11 +606,13 @@ export type DashboardAccountSelectScalar = {
   email?: boolean
   passwordHash?: boolean
   role?: boolean
+  suspended?: boolean
+  domainPattern?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type DashboardAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "email" | "passwordHash" | "role" | "createdAt" | "updatedAt", ExtArgs["result"]["dashboardAccount"]>
+export type DashboardAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "email" | "passwordHash" | "role" | "suspended" | "domainPattern" | "createdAt" | "updatedAt", ExtArgs["result"]["dashboardAccount"]>
 export type DashboardAccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   systemUsers?: boolean | Prisma.DashboardAccount$systemUsersArgs<ExtArgs>
   _count?: boolean | Prisma.DashboardAccountCountOutputTypeDefaultArgs<ExtArgs>
@@ -565,6 +629,8 @@ export type $DashboardAccountPayload<ExtArgs extends runtime.Types.Extensions.In
     email: string
     passwordHash: string
     role: string
+    suspended: boolean
+    domainPattern: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["dashboardAccount"]>
@@ -942,6 +1008,8 @@ export interface DashboardAccountFieldRefs {
   readonly email: Prisma.FieldRef<"DashboardAccount", 'String'>
   readonly passwordHash: Prisma.FieldRef<"DashboardAccount", 'String'>
   readonly role: Prisma.FieldRef<"DashboardAccount", 'String'>
+  readonly suspended: Prisma.FieldRef<"DashboardAccount", 'Boolean'>
+  readonly domainPattern: Prisma.FieldRef<"DashboardAccount", 'String'>
   readonly createdAt: Prisma.FieldRef<"DashboardAccount", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"DashboardAccount", 'DateTime'>
 }

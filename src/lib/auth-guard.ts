@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser, getLinkedUsernames } from "./auth";
 
 interface AuthResult {
-  user: { id: number; username: string; email: string; role: string };
+  user: { id: number; username: string; email: string; role: string; domainPattern: string | null };
   allowedUsernames: string[] | null; // null = admin (no filtering)
 }
 

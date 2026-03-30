@@ -12,6 +12,7 @@ export async function GET() {
     username: user.username,
     email: user.email,
     role: user.role,
+    domainPattern: user.domainPattern ?? null,
     linkedUsers: user.systemUsers.map((su) => su.hestiaUsername),
   });
 }

@@ -24,6 +24,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (user.suspended) {
+      return NextResponse.json(
+        { error: "Account is suspended" },
+        { status: 403 }
+      );
+    }
+
     const token = await createJWT({
       sub: user.id,
       username: user.username,

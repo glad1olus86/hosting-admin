@@ -55,6 +55,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context";
 
 interface HestiaDomain {
   domain: string;
@@ -201,6 +202,13 @@ function DomainRows({
 
 export default function DomainsPage() {
   const router = useRouter();
+  const { user: authUser } = useAuth();
+  const domainPattern = authUser?.domainPattern || null;
+  // Split pattern into prefix/suffix for pattern-aware input
+  const patternParts = domainPattern ? domainPattern.split("%edit%") : null;
+  const patternPrefix = patternParts && patternParts.length === 2 ? patternParts[0] : null;
+  const patternSuffix = patternParts && patternParts.length === 2 ? patternParts[1] : null;
+
   const [domains, setDomains] = useState<HestiaDomain[]>([]);
   const [users, setUsers] = useState<HestiaUser[]>([]);
   const [serverIps, setServerIps] = useState<ServerIp[]>([]);
@@ -314,22 +322,25 @@ export default function DomainsPage() {
   const handleAddDomain = async () => {
     if (!addForm.user || !addForm.domain) return;
     setAddLoading(true);
+    // Build full domain name from pattern if set
+    const fullDomain = (patternPrefix !== null && patternSuffix !== null)
+      ? `${patternPrefix}${addForm.domain}${patternSuffix}`
+      : addForm.domain;
     try {
       const res = await fetch("/api/domains", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: addForm.user, domain: addForm.domain, ip: addForm.ip || undefined, mail: addForm.mail }),
+        body: JSON.stringify({ user: addForm.user, domain: fullDomain, ip: addForm.ip || undefined, mail: addForm.mail }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed to add domain");
       const wantSsl = addForm.ssl;
       const domainUser = addForm.user;
-      const domainName = addForm.domain;
       setAddDialogOpen(false);
       const primaryIp = serverIps.length > 0 ? [...serverIps].sort((a, b) => b.domains - a.domains)[0].ip : "";
       setAddForm({ user: "", domain: "", ip: primaryIp, ssl: false, mail: true });
       await fetchDomains();
-      if (wantSsl) requestSsl(domainUser, domainName);
+      if (wantSsl) requestSsl(domainUser, fullDomain);
     } catch (err: any) {
       alert(err.message || "Failed to add domain");
     } finally {
@@ -573,12 +584,38 @@ export default function DomainsPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="add-domain">Domain Name</Label>
-              <Input
-                id="add-domain"
-                placeholder="example.com"
-                value={addForm.domain}
-                onChange={(e) => setAddForm((f) => ({ ...f, domain: e.target.value }))}
-              />
+              {patternPrefix !== null && patternSuffix !== null ? (
+                <div className="flex items-center gap-0">
+                  {patternPrefix && (
+                    <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 py-2 text-sm text-muted-foreground font-mono whitespace-nowrap">
+                      {patternPrefix}
+                    </span>
+                  )}
+                  <Input
+                    id="add-domain"
+                    placeholder="subdomain"
+                    value={addForm.domain}
+                    onChange={(e) => setAddForm((f) => ({ ...f, domain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))}
+                    className={cn(
+                      "font-mono",
+                      patternPrefix ? "rounded-l-none" : "",
+                      patternSuffix ? "rounded-r-none" : ""
+                    )}
+                  />
+                  {patternSuffix && (
+                    <span className="inline-flex items-center rounded-r-md border border-l-0 border-input bg-muted px-3 py-2 text-sm text-muted-foreground font-mono whitespace-nowrap">
+                      {patternSuffix}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <Input
+                  id="add-domain"
+                  placeholder="example.com"
+                  value={addForm.domain}
+                  onChange={(e) => setAddForm((f) => ({ ...f, domain: e.target.value }))}
+                />
+              )}
             </div>
             {serverIps.length > 1 && (
               <div className="grid gap-2">

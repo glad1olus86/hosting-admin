@@ -12,10 +12,12 @@ model DashboardAccount {
   username     String              @unique @db.VarChar(50)
   email        String              @unique @db.VarChar(255)
   passwordHash String              @map("password_hash") @db.VarChar(255)
-  role         String              @default("user") @db.VarChar(10)
-  createdAt    DateTime            @default(now()) @map("created_at")
-  updatedAt    DateTime            @updatedAt @map("updated_at")
-  systemUsers  AccountSystemUser[]
+  role          String              @default("user") @db.VarChar(10)
+  suspended     Boolean             @default(false)
+  domainPattern String?             @map("domain_pattern") @db.VarChar(255)
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  systemUsers   AccountSystemUser[]
 
   @@map("dashboard_accounts")
 }

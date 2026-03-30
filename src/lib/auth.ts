@@ -99,9 +99,13 @@ export async function getCurrentUser() {
       username: true,
       email: true,
       role: true,
+      suspended: true,
+      domainPattern: true,
       systemUsers: { select: { hestiaUsername: true } },
     },
   });
+
+  if (!user || user.suspended) return null;
 
   return user;
 }

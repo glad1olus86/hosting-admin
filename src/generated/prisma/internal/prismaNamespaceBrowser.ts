@@ -78,6 +78,8 @@ export const DashboardAccountScalarFieldEnum = {
   email: 'email',
   passwordHash: 'passwordHash',
   role: 'role',
+  suspended: 'suspended',
+  domainPattern: 'domainPattern',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -118,11 +120,20 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
 export const DashboardAccountOrderByRelevanceFieldEnum = {
   username: 'username',
   email: 'email',
   passwordHash: 'passwordHash',
-  role: 'role'
+  role: 'role',
+  domainPattern: 'domainPattern'
 } as const
 
 export type DashboardAccountOrderByRelevanceFieldEnum = (typeof DashboardAccountOrderByRelevanceFieldEnum)[keyof typeof DashboardAccountOrderByRelevanceFieldEnum]

@@ -15,6 +15,13 @@ import {
   RefreshCw,
   Activity,
   XCircle,
+  Users,
+  Pencil,
+  Ban,
+  PlayCircle,
+  Eye,
+  EyeOff,
+  Copy,
 } from "lucide-react";
 import { GlassCard } from "@/components/layout/glass-card";
 import { Button } from "@/components/ui/button";
@@ -72,6 +79,21 @@ interface FirewallRule {
   ip: string;
   comment: string;
   suspended: string;
+}
+
+interface DashboardAccountInfo {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  suspended: boolean;
+  domainPattern: string | null;
+  linkedUsers: string[];
+  createdAt: string;
+}
+
+interface HestiaUser {
+  username: string;
 }
 
 // ─── Page ─────────────────────────────────────────────────
@@ -141,6 +163,26 @@ export default function SettingsPage() {
     null
   );
 
+  // ── User Management ─────────────────────────────────
+  const [accounts, setAccounts] = useState<DashboardAccountInfo[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [systemUsers, setSystemUsers] = useState<HestiaUser[]>([]);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editAccount, setEditAccount] = useState<DashboardAccountInfo | null>(null);
+  const [editForm, setEditForm] = useState({
+    username: "",
+    email: "",
+    password: "",
+    role: "user" as string,
+    domainPattern: "",
+    linkedUsers: [] as string[],
+  });
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editMsg, setEditMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [suspendLoading, setSuspendLoading] = useState<number | null>(null);
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState<number | null>(null);
+
   // ── Fetch helpers ─────────────────────────────────────
 
   const fetchConnection = useCallback(async () => {
@@ -192,14 +234,38 @@ export default function SettingsPage() {
     setFirewallLoading(false);
   }, []);
 
+  const fetchAccounts = useCallback(async () => {
+    setAccountsLoading(true);
+    try {
+      const res = await fetch("/api/accounts");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setAccounts(data);
+      }
+    } catch {}
+    setAccountsLoading(false);
+  }, []);
+
+  const fetchSystemUsers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/users");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setSystemUsers(data);
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (isAdmin) {
       fetchConnection();
       fetchLimits();
       fetchBackup();
       fetchFirewall();
+      fetchAccounts();
+      fetchSystemUsers();
     }
-  }, [isAdmin, fetchConnection, fetchLimits, fetchBackup, fetchFirewall]);
+  }, [isAdmin, fetchConnection, fetchLimits, fetchBackup, fetchFirewall, fetchAccounts, fetchSystemUsers]);
 
   useEffect(() => {
     if (user?.email) setEmailForm(user.email);
@@ -351,6 +417,123 @@ export default function SettingsPage() {
       alert(err.message);
     } finally {
       setDeleteRuleLoading(null);
+    }
+  }
+
+  // ── User Management Handlers ─────────────────────────
+
+  function openEditDialog(acc: DashboardAccountInfo) {
+    setEditAccount(acc);
+    setEditForm({
+      username: acc.username,
+      email: acc.email,
+      password: "",
+      role: acc.role,
+      domainPattern: acc.domainPattern || "",
+      linkedUsers: [...acc.linkedUsers],
+    });
+    setEditMsg(null);
+    setShowEditPassword(false);
+    setEditDialogOpen(true);
+  }
+
+  function generatePassword() {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*";
+    let pw = "";
+    for (let i = 0; i < 16; i++) pw += chars[Math.floor(Math.random() * chars.length)];
+    setEditForm((f) => ({ ...f, password: pw }));
+    setShowEditPassword(true);
+  }
+
+  async function handleSaveAccount() {
+    if (!editAccount) return;
+    setEditSaving(true);
+    setEditMsg(null);
+
+    try {
+      const actions: Array<{ action: string; [key: string]: any }> = [];
+
+      if (editForm.username !== editAccount.username) {
+        actions.push({ action: "change_username", username: editForm.username });
+      }
+      if (editForm.email !== editAccount.email) {
+        actions.push({ action: "change_email", email: editForm.email });
+      }
+      if (editForm.password) {
+        actions.push({ action: "reset_password", password: editForm.password });
+      }
+      if (editForm.role !== editAccount.role) {
+        actions.push({ action: "change_role", role: editForm.role });
+      }
+      if (editForm.domainPattern !== (editAccount.domainPattern || "")) {
+        actions.push({ action: "set_domain_pattern", domainPattern: editForm.domainPattern });
+      }
+      const oldLinks = [...editAccount.linkedUsers].sort().join(",");
+      const newLinks = [...editForm.linkedUsers].sort().join(",");
+      if (oldLinks !== newLinks) {
+        actions.push({ action: "update_links", linkedUsers: editForm.linkedUsers });
+      }
+
+      if (actions.length === 0) {
+        setEditMsg({ type: "error", text: "No changes to save" });
+        setEditSaving(false);
+        return;
+      }
+
+      for (const act of actions) {
+        const res = await fetch("/api/accounts", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editAccount.id, ...act }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed");
+      }
+
+      setEditMsg({ type: "success", text: "Account updated" });
+      fetchAccounts();
+      setTimeout(() => setEditDialogOpen(false), 800);
+    } catch (err: any) {
+      setEditMsg({ type: "error", text: err.message });
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  async function handleToggleSuspend(acc: DashboardAccountInfo) {
+    setSuspendLoading(acc.id);
+    try {
+      const res = await fetch("/api/accounts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: acc.id, action: acc.suspended ? "unsuspend" : "suspend" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      fetchAccounts();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSuspendLoading(null);
+    }
+  }
+
+  async function handleDeleteAccount(acc: DashboardAccountInfo) {
+    if (!confirm(`Delete account "${acc.username}"? This cannot be undone.`)) return;
+    setDeleteAccountLoading(acc.id);
+    try {
+      const res = await fetch("/api/accounts", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: acc.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      fetchAccounts();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setDeleteAccountLoading(null);
     }
   }
 
@@ -776,6 +959,256 @@ export default function SettingsPage() {
           )}
         </GlassCard>
       )}
+
+      {/* ─── User Management (admin only) ──────────────── */}
+      {isAdmin && (
+        <GlassCard>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-lg font-semibold text-[#134E4A]">
+              <Users className="h-5 w-5" />
+              User Management
+            </h3>
+          </div>
+          {accountsLoading ? (
+            <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading...
+            </div>
+          ) : accounts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No accounts found.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Username</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Domain Rule</TableHead>
+                    <TableHead>Linked Users</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {accounts.map((acc) => (
+                    <TableRow key={acc.id} className={acc.suspended ? "opacity-60" : ""}>
+                      <TableCell className="font-medium">{acc.username}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{acc.email}</TableCell>
+                      <TableCell>
+                        <Badge className={cn(
+                          acc.role === "admin"
+                            ? "bg-purple-100 text-purple-700 border-purple-200"
+                            : "bg-blue-100 text-blue-700 border-blue-200"
+                        )}>
+                          {acc.role.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={cn(
+                          acc.suspended
+                            ? "bg-red-100 text-red-700 border-red-200"
+                            : "bg-emerald-100 text-emerald-700 border-emerald-200"
+                        )}>
+                          {acc.suspended ? "Suspended" : "Active"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground max-w-[200px] truncate">
+                        {acc.domainPattern ? acc.domainPattern.replace("%edit%", "*") : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {acc.linkedUsers.length > 0 ? acc.linkedUsers.join(", ") : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(acc)}>
+                            <Pencil className="h-4 w-4 text-teal-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleSuspend(acc)}
+                            disabled={suspendLoading === acc.id || acc.id === user?.id}
+                          >
+                            {suspendLoading === acc.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : acc.suspended ? (
+                              <PlayCircle className="h-4 w-4 text-emerald-600" />
+                            ) : (
+                              <Ban className="h-4 w-4 text-orange-500" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteAccount(acc)}
+                            disabled={deleteAccountLoading === acc.id || acc.id === user?.id}
+                          >
+                            {deleteAccountLoading === acc.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </GlassCard>
+      )}
+
+      {/* ─── Edit Account Dialog ────────────────────────── */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Account — {editAccount?.username}</DialogTitle>
+            <DialogDescription>Update account settings and restrictions.</DialogDescription>
+          </DialogHeader>
+          {editMsg && (
+            <div className={cn(
+              "rounded-lg border px-3 py-2 text-sm",
+              editMsg.type === "success"
+                ? "border-green-200 bg-green-50 text-green-600"
+                : "border-red-200 bg-red-50 text-red-600"
+            )}>
+              {editMsg.text}
+            </div>
+          )}
+          <div className="grid gap-4 py-2">
+            {/* Username */}
+            <div className="space-y-1.5">
+              <Label>Username</Label>
+              <Input
+                value={editForm.username}
+                onChange={(e) => setEditForm((f) => ({ ...f, username: e.target.value }))}
+              />
+            </div>
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+            {/* Password */}
+            <div className="space-y-1.5">
+              <Label>New Password (leave empty to keep current)</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type={showEditPassword ? "text" : "password"}
+                    value={editForm.password}
+                    onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
+                    placeholder="Leave empty to keep current"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                    onClick={() => setShowEditPassword(!showEditPassword)}
+                  >
+                    {showEditPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+                <Button variant="outline" size="sm" onClick={generatePassword} className="whitespace-nowrap">
+                  Generate
+                </Button>
+                {editForm.password && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(editForm.password);
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            {/* Role */}
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={editForm.role === "user" ? "default" : "outline"}
+                  className={editForm.role === "user" ? "bg-teal-600 text-white hover:bg-teal-700" : ""}
+                  onClick={() => setEditForm((f) => ({ ...f, role: "user" }))}
+                >
+                  User
+                </Button>
+                <Button
+                  size="sm"
+                  variant={editForm.role === "admin" ? "default" : "outline"}
+                  className={editForm.role === "admin" ? "bg-purple-600 text-white hover:bg-purple-700" : ""}
+                  onClick={() => setEditForm((f) => ({ ...f, role: "admin" }))}
+                >
+                  Admin
+                </Button>
+              </div>
+            </div>
+            {/* Domain Pattern */}
+            <div className="space-y-1.5">
+              <Label>Domain Creation Pattern</Label>
+              <Input
+                value={editForm.domainPattern}
+                onChange={(e) => setEditForm((f) => ({ ...f, domainPattern: e.target.value }))}
+                placeholder="demo.%edit%.lamapixel.com"
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Use <code className="bg-muted px-1 rounded">%edit%</code> to mark the editable part. Leave empty for no restriction.
+              </p>
+            </div>
+            {/* Linked System Users */}
+            <div className="space-y-1.5">
+              <Label>Linked System Users</Label>
+              {systemUsers.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No system users available</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {systemUsers.map((su) => (
+                    <label key={su.username} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editForm.linkedUsers.includes(su.username)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setEditForm((f) => ({ ...f, linkedUsers: [...f.linkedUsers, su.username] }));
+                          } else {
+                            setEditForm((f) => ({ ...f, linkedUsers: f.linkedUsers.filter((u) => u !== su.username) }));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                      />
+                      {su.username}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button
+              className="bg-teal-600 text-white hover:bg-teal-700"
+              onClick={handleSaveAccount}
+              disabled={editSaving}
+            >
+              {editSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Add Firewall Rule Dialog ─────────────────── */}
       <Dialog open={addRuleOpen} onOpenChange={setAddRuleOpen}>
