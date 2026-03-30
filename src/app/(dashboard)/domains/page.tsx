@@ -327,7 +327,7 @@ export default function DomainsPage() {
 
   // Add domain dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [addForm, setAddForm] = useState({ user: "", domain: "", ip: "", ssl: false, mail: true });
+  const [addForm, setAddForm] = useState({ user: "", domain: "", ip: "116.202.219.165", ssl: false, mail: true });
   const [addLoading, setAddLoading] = useState(false);
 
   // Delete dialog
@@ -375,15 +375,7 @@ export default function DomainsPage() {
       const res = await fetch("/api/ips");
       if (!res.ok) return;
       const data = await res.json();
-      if (!data.error) {
-        const ips = data as ServerIp[];
-        setServerIps(ips);
-        // Pre-select the primary IP (most domains assigned)
-        if (ips.length > 0) {
-          const primary = [...ips].sort((a, b) => b.domains - a.domains)[0];
-          setAddForm((f) => f.ip ? f : { ...f, ip: primary.ip });
-        }
-      }
+      if (!data.error) setServerIps(data as ServerIp[]);
     } catch {}
   }, []);
 
@@ -450,8 +442,7 @@ export default function DomainsPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Failed to add domain");
       setAddDialogOpen(false);
-      const primaryIp = serverIps.length > 0 ? [...serverIps].sort((a, b) => b.domains - a.domains)[0].ip : "";
-      setAddForm({ user: "", domain: "", ip: primaryIp, ssl: false, mail: true });
+      setAddForm({ user: "", domain: "", ip: "116.202.219.165", ssl: false, mail: true });
       await fetchDomains();
     } catch (err: any) {
       toast.error(err.message || "Failed to add domain");
@@ -818,24 +809,7 @@ export default function DomainsPage() {
                 />
               )}
             </div>
-            {serverIps.length > 1 && (
-              <div className="grid gap-2">
-                <Label>IP Address</Label>
-                <Select value={addForm.ip} onValueChange={(val) => val && setAddForm((f) => ({ ...f, ip: val }))}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Auto (default)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {serverIps.map((s) => (
-                      <SelectItem key={s.ip} value={s.ip}>
-                        <span className="font-mono">{s.ip}</span>
-                        {s.name && <span className="text-muted-foreground ml-2">({s.name})</span>}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* IP hardcoded to ns1 (116.202.219.165) */}
             <div className="flex items-center gap-2">
               <input
                 id="add-mail"

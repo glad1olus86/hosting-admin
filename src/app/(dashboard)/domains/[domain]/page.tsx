@@ -1252,6 +1252,7 @@ export default function DomainPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
+                        {isMySQL && <Button variant="ghost" size="sm" className="cursor-pointer h-8 px-2" title="phpMyAdmin" onClick={() => window.open(`https://${domain}/phpmyadmin/`, "_blank")}><ExternalLink className="h-4 w-4 text-teal-600" /></Button>}
                         <Button variant="ghost" size="sm" className="cursor-pointer h-8 px-2" title="Copy name" onClick={() => cpClip(db.name)}><Copy className="h-4 w-4 text-slate-500" /></Button>
                         <Button variant="ghost" size="sm" className="cursor-pointer h-8 px-2" title="Change password" onClick={() => { setDbPwTarget(db); setDbNewPw(""); setShowDbNewPw(false); setDbPwOpen(true); }}><Key className="h-4 w-4 text-amber-500" /></Button>
                         <Button variant="ghost" size="sm" className="cursor-pointer h-8 px-2" title={isSusp ? "Unsuspend" : "Suspend"} disabled={isActLoading} onClick={() => handleDbToggleSuspend(db)}>

@@ -15,6 +15,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  ExternalLink,
 } from "lucide-react";
 import { GlassCard } from "@/components/layout/glass-card";
 import { Button } from "@/components/ui/button";
@@ -466,6 +467,17 @@ export default function DatabasesPage() {
 
                   {/* Right: Actions */}
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {isMySQL && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="cursor-pointer h-8 px-2"
+                        title="phpMyAdmin"
+                        onClick={() => window.open(`https://${window.location.hostname}/phpmyadmin/`, "_blank")}
+                      >
+                        <ExternalLink className="h-4 w-4 text-teal-600" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
