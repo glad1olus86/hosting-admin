@@ -379,8 +379,15 @@ export async function hestiaActionCommand(cmd: string, ...args: string[]): Promi
     cache: "no-store",
   });
 
-  const text = await response.text();
-  const code = parseInt(text.trim(), 10);
+  const text = (await response.text()).trim();
+
+  // Handle empty response — treat as success if HTTP status is OK
+  if (!text && response.ok) {
+    console.log(`[HestiaAPI] action: ${cmd} empty response (HTTP ${response.status}), treating as success`);
+    return;
+  }
+
+  const code = parseInt(text, 10);
 
   console.log(`[HestiaAPI] action: ${cmd} returncode=${code}`);
 
