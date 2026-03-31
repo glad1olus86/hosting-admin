@@ -49,43 +49,46 @@ export async function POST(request: Request) {
     const { nginxClientMaxBodySize, phpUploadMaxFilesize, phpPostMaxSize, phpMemoryLimit } =
       await request.json();
 
-    const commands: string[] = [];
+    // Validate input format (e.g. "512M", "2048M", "1G")
+    const validFormat = /^\d+[MmGg]?$/;
+    for (const val of [nginxClientMaxBodySize, phpUploadMaxFilesize, phpPostMaxSize, phpMemoryLimit]) {
+      if (val && !validFormat.test(val)) {
+        return NextResponse.json({ error: `Invalid value format: ${val}` }, { status: 400 });
+      }
+    }
+
+    const configCommands: string[] = [];
 
     // Update nginx
     if (nginxClientMaxBodySize) {
-      commands.push(
+      configCommands.push(
         `sed -i 's/client_max_body_size.*/client_max_body_size ${nginxClientMaxBodySize};/' /etc/nginx/nginx.conf`
       );
     }
 
     // Find all active PHP ini files and update them
     if (phpUploadMaxFilesize) {
-      commands.push(
+      configCommands.push(
         `find /etc/php -name 'php.ini' -exec sed -i 's/^upload_max_filesize.*/upload_max_filesize = ${phpUploadMaxFilesize}/' {} \\;`
       );
     }
     if (phpPostMaxSize) {
-      commands.push(
+      configCommands.push(
         `find /etc/php -name 'php.ini' -exec sed -i 's/^post_max_size.*/post_max_size = ${phpPostMaxSize}/' {} \\;`
       );
     }
     if (phpMemoryLimit) {
-      commands.push(
+      configCommands.push(
         `find /etc/php -name 'php.ini' -exec sed -i 's/^memory_limit.*/memory_limit = ${phpMemoryLimit}/' {} \\;`
       );
     }
 
-    if (commands.length === 0) {
+    if (configCommands.length === 0) {
       return NextResponse.json({ error: "No values provided" }, { status: 400 });
     }
 
-    // Restart services
-    commands.push("systemctl restart nginx 2>/dev/null || true");
-    commands.push(
-      "systemctl restart 'php*-fpm' 2>/dev/null || true"
-    );
-
-    const result = await execAsRoot(commands.join(" && "));
+    // Step 1: Apply config changes synchronously
+    const result = await execAsRoot(configCommands.join(" && "));
 
     if (result.code !== 0 && result.stderr && !result.stderr.includes("warning")) {
       return NextResponse.json(
@@ -93,6 +96,12 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // Step 2: Restart services in background (nohup + &) so nginx restart
+    // doesn't kill the proxy connection that serves this response
+    execAsRoot(
+      `nohup bash -c 'sleep 1 && systemctl restart php*-fpm 2>/dev/null; systemctl reload nginx 2>/dev/null' &>/dev/null &`
+    ).catch(() => {});
 
     return NextResponse.json({ ok: true });
   } catch (error: any) {
