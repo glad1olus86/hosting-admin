@@ -352,12 +352,16 @@ export default function DomainPage() {
 
   const fetchWpStatus = useCallback(async () => {
     try {
+      console.log(`[WP] fetchWpStatus called: user=${user} domain=${domain}`);
       const res = await fetch(`/api/wordpress/admin?user=${encodeURIComponent(user)}&domain=${encodeURIComponent(domain)}`);
       const data = await res.json();
+      console.log(`[WP] API response:`, res.status, data);
       if (data.error) return;
       setWpInstalled(data.installed);
       if (data.admins) setWpAdmins(data.admins);
-    } catch {}
+    } catch (err) {
+      console.error(`[WP] fetchWpStatus error:`, err);
+    }
   }, [user, domain]);
 
   // ── Domain action helper ──

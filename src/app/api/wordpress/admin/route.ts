@@ -10,10 +10,12 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const user = searchParams.get("user");
   const domain = searchParams.get("domain");
+  console.log(`[WP-Admin] GET user=${user} domain=${domain}`);
   if (!user || !domain) {
     return NextResponse.json({ error: "user and domain required" }, { status: 400 });
   }
   if (!canAccessUser(auth.allowedUsernames, user)) {
+    console.log(`[WP-Admin] Forbidden: user=${user} not in allowedUsernames=${JSON.stringify(auth.allowedUsernames)}`);
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -23,6 +25,7 @@ export async function GET(request: NextRequest) {
 
     // Check if wp-config.php exists
     const check = await execAsUser(user, `test -f ${path}/wp-config.php && echo "yes" || echo "no"`);
+    console.log(`[WP-Admin] wp-config check: stdout="${check.stdout.trim()}" code=${check.code}`);
     if (!check.stdout.includes("yes")) {
       return NextResponse.json({ installed: false });
     }
@@ -47,8 +50,10 @@ export async function GET(request: NextRequest) {
       if (jsonLine) admins = JSON.parse(jsonLine);
     } catch {}
 
+    console.log(`[WP-Admin] Result: installed=true admins=${admins.length}`);
     return NextResponse.json({ installed: true, admins });
   } catch (error: any) {
+    console.error(`[WP-Admin] Error:`, error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
