@@ -46,8 +46,8 @@ export async function GET(request: NextRequest) {
     let admins: { ID: string; user_login: string; user_email: string }[] = [];
     try {
       // Filter out sudo password prompt lines and parse JSON
-      const jsonLine = result.stdout.split("\n").find((l) => l.trim().startsWith("["));
-      if (jsonLine) admins = JSON.parse(jsonLine);
+      const jsonLine = result.stdout.split("\n").find((l) => l.trim().startsWith("[{") || l.trim().startsWith("[]"));
+      if (jsonLine) admins = JSON.parse(jsonLine.trim());
     } catch {}
 
     console.log(`[WP-Admin] Result: installed=true admins=${admins.length}`);
