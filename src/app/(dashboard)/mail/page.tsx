@@ -22,6 +22,7 @@ import {
   Monitor,
   Globe,
   Inbox,
+  RefreshCw,
 } from "lucide-react";
 import { GlassCard } from "@/components/layout/glass-card";
 import { Button } from "@/components/ui/button";
@@ -138,6 +139,13 @@ export default function MailPage() {
   const [passwordTarget, setPasswordTarget] = useState<{ user: string; domain: string; account: string } | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const generatePassword = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let pwd = "";
+    for (let i = 0; i < 16; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+    return pwd;
+  };
 
   // Account Settings Sheet
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -862,7 +870,18 @@ export default function MailPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="add-account-password">Password</Label>
-              <Input id="add-account-password" type="password" placeholder="Password" value={addAccountForm.password} onChange={(e) => setAddAccountForm((f) => ({ ...f, password: e.target.value }))} />
+              <div className="flex gap-2">
+                <Input id="add-account-password" type="text" placeholder="Password" value={addAccountForm.password} onChange={(e) => setAddAccountForm((f) => ({ ...f, password: e.target.value }))} />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="cursor-pointer shrink-0"
+                  onClick={() => setAddAccountForm((f) => ({ ...f, password: generatePassword() }))}
+                  title="Generate password"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -906,7 +925,18 @@ export default function MailPage() {
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
               <Label htmlFor="new-password">New Password</Label>
-              <Input id="new-password" type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleChangePassword()} />
+              <div className="flex gap-2">
+                <Input id="new-password" type="text" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleChangePassword()} />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="cursor-pointer shrink-0"
+                  onClick={() => setNewPassword(generatePassword())}
+                  title="Generate password"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
           <DialogFooter>
