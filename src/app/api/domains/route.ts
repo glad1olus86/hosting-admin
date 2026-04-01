@@ -8,6 +8,7 @@ import {
   deleteLetsEncrypt,
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
+import { execAsRoot } from "@/lib/ssh-client";
 
 const HIDDEN_DOMAINS = ["host.lamapixel.com", "system.lamapixel.com"];
 
@@ -27,7 +28,30 @@ export async function GET() {
   try {
     const domains = await listAllDomains();
     const visible = domains.filter((d: any) => !HIDDEN_DOMAINS.includes(d.domain));
-    return NextResponse.json(filterByUser(visible, auth.allowedUsernames));
+    const filtered = filterByUser(visible, auth.allowedUsernames);
+
+    // Fix 0 MB disk usage for domains where HestiaCP hasn't calculated yet
+    const zeroDisk = filtered.filter((d: any) => d.U_DISK === "0" || d.U_DISK === 0);
+    if (zeroDisk.length > 0) {
+      try {
+        const paths = zeroDisk.map((d: any) => `/home/${d.user}/web/${d.domain}/`).join(" ");
+        const duResult = await execAsRoot(`du -sm ${paths} 2>/dev/null`);
+        const sizeMap: Record<string, string> = {};
+        for (const line of duResult.stdout.split("\n")) {
+          const match = line.match(/(\d+)\s+\/home\/\w+\/web\/([^/]+)\//);
+          if (match) sizeMap[match[2]] = match[1];
+        }
+        for (const d of filtered) {
+          if ((d.U_DISK === "0" || d.U_DISK === 0) && sizeMap[d.domain]) {
+            d.U_DISK = sizeMap[d.domain];
+          }
+        }
+      } catch {
+        // Non-critical, keep HestiaCP values
+      }
+    }
+
+    return NextResponse.json(filtered);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

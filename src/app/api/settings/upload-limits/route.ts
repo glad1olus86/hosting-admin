@@ -10,27 +10,35 @@ export async function GET() {
   try {
     const result = await execAsRoot(
       [
-        // Nginx client_max_body_size
-        `grep -r 'client_max_body_size' /etc/nginx/nginx.conf 2>/dev/null | head -1 | awk '{print $2}' | tr -d ';'`,
+        `grep -r 'client_max_body_size' /etc/nginx/nginx.conf 2>/dev/null | head -1`,
         "echo '---SEP---'",
-        // PHP upload_max_filesize (find first php.ini)
-        `php -i 2>/dev/null | grep 'upload_max_filesize' | head -1 | awk '{print $NF}'`,
+        `php -i 2>/dev/null | grep 'upload_max_filesize' | head -1`,
         "echo '---SEP---'",
-        // PHP post_max_size
-        `php -i 2>/dev/null | grep 'post_max_size' | head -1 | awk '{print $NF}'`,
+        `php -i 2>/dev/null | grep 'post_max_size' | head -1`,
         "echo '---SEP---'",
-        // PHP memory_limit
-        `php -i 2>/dev/null | grep 'memory_limit' | head -1 | awk '{print $NF}'`,
+        `php -i 2>/dev/null | grep 'memory_limit' | head -1`,
       ].join(" && ")
     );
 
-    const parts = result.stdout.split("---SEP---").map((s) => s.trim());
+    // Strip [sudo] password prompt from output
+    const clean = result.stdout.replace(/\[sudo\] password for \w+:\s*/g, "");
+    const parts = clean.split("---SEP---").map((s) => s.trim());
+
+    // Extract value with unit (e.g. "2048M", "128M") from each part
+    const extractValue = (raw: string): string => {
+      const match = raw.match(/(\d+[MmGgKk]?)\s*;?\s*$/);
+      if (match) return match[1];
+      // PHP format: "key => local => master" — take last value
+      const phpMatch = raw.match(/=>\s*(\d+[MmGgKk]?)\s*$/);
+      if (phpMatch) return phpMatch[1];
+      return raw || "unknown";
+    };
 
     return NextResponse.json({
-      nginxClientMaxBodySize: parts[0] || "unknown",
-      phpUploadMaxFilesize: parts[1] || "unknown",
-      phpPostMaxSize: parts[2] || "unknown",
-      phpMemoryLimit: parts[3] || "unknown",
+      nginxClientMaxBodySize: extractValue(parts[0] || ""),
+      phpUploadMaxFilesize: extractValue(parts[1] || ""),
+      phpPostMaxSize: extractValue(parts[2] || ""),
+      phpMemoryLimit: extractValue(parts[3] || ""),
     });
   } catch (error: any) {
     return NextResponse.json(

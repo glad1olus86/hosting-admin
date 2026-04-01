@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isNextResponse, canAccessUser } from "@/lib/auth-guard";
+import { execAsRoot } from "@/lib/ssh-client";
 import {
   listDomains,
   changeBackendTemplate,
@@ -56,6 +57,19 @@ export async function GET(
       httpAuthUsers = await listHttpAuth(user, domain);
     } catch {
       // Non-critical
+    }
+
+    // If HestiaCP reports 0 disk (not yet calculated), get real size via du
+    if (domainData.U_DISK === "0" || domainData.U_DISK === 0) {
+      try {
+        const duResult = await execAsRoot(
+          `du -sm /home/${user}/web/${domain}/ 2>/dev/null | awk '{print $1}'`
+        );
+        const size = duResult.stdout.match(/(\d+)/);
+        if (size) domainData.U_DISK = size[1];
+      } catch {
+        // Non-critical, keep HestiaCP value
+      }
     }
 
     return NextResponse.json({ ...domainData, httpAuthUsers });
