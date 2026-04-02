@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, isNextResponse } from "@/lib/auth-guard";
 import { execAsRoot } from "@/lib/ssh-client";
+import { logAction } from "@/lib/audit";
 
 // GET — read current upload limits from nginx and PHP
 export async function GET() {
@@ -111,6 +112,7 @@ export async function POST(request: Request) {
       `nohup bash -c 'sleep 1 && systemctl restart php*-fpm 2>/dev/null; systemctl reload nginx 2>/dev/null' &>/dev/null &`
     ).catch(() => {});
 
+    logAction(request, auth.user, "settings.upload-limits", null, { nginxClientMaxBodySize, phpUploadMaxFilesize, phpPostMaxSize, phpMemoryLimit });
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json(

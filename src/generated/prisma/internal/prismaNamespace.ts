@@ -387,6 +387,8 @@ export const ModelName = {
   DashboardAccount: 'DashboardAccount',
   AccountSystemUser: 'AccountSystemUser',
   DomainMeta: 'DomainMeta',
+  AuditLog: 'AuditLog',
+  LoginLog: 'LoginLog',
   MetricSnapshot: 'MetricSnapshot'
 } as const
 
@@ -403,7 +405,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "dashboardAccount" | "accountSystemUser" | "domainMeta" | "metricSnapshot"
+    modelProps: "dashboardAccount" | "accountSystemUser" | "domainMeta" | "auditLog" | "loginLog" | "metricSnapshot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -605,6 +607,138 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    AuditLog: {
+      payload: Prisma.$AuditLogPayload<ExtArgs>
+      fields: Prisma.AuditLogFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AuditLogFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AuditLogPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AuditLogFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AuditLogPayload>
+        }
+        findFirst: {
+          args: Prisma.AuditLogFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AuditLogPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AuditLogFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AuditLogPayload>
+        }
+        findMany: {
+          args: Prisma.AuditLogFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AuditLogPayload>[]
+        }
+        create: {
+          args: Prisma.AuditLogCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AuditLogPayload>
+        }
+        createMany: {
+          args: Prisma.AuditLogCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.AuditLogDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AuditLogPayload>
+        }
+        update: {
+          args: Prisma.AuditLogUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AuditLogPayload>
+        }
+        deleteMany: {
+          args: Prisma.AuditLogDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AuditLogUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.AuditLogUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AuditLogPayload>
+        }
+        aggregate: {
+          args: Prisma.AuditLogAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAuditLog>
+        }
+        groupBy: {
+          args: Prisma.AuditLogGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AuditLogGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AuditLogCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AuditLogCountAggregateOutputType> | number
+        }
+      }
+    }
+    LoginLog: {
+      payload: Prisma.$LoginLogPayload<ExtArgs>
+      fields: Prisma.LoginLogFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LoginLogFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LoginLogFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>
+        }
+        findFirst: {
+          args: Prisma.LoginLogFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LoginLogFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>
+        }
+        findMany: {
+          args: Prisma.LoginLogFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>[]
+        }
+        create: {
+          args: Prisma.LoginLogCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>
+        }
+        createMany: {
+          args: Prisma.LoginLogCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.LoginLogDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>
+        }
+        update: {
+          args: Prisma.LoginLogUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>
+        }
+        deleteMany: {
+          args: Prisma.LoginLogDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LoginLogUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.LoginLogUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoginLogPayload>
+        }
+        aggregate: {
+          args: Prisma.LoginLogAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLoginLog>
+        }
+        groupBy: {
+          args: Prisma.LoginLogGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LoginLogGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LoginLogCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LoginLogCountAggregateOutputType> | number
+        }
+      }
+    }
     MetricSnapshot: {
       payload: Prisma.$MetricSnapshotPayload<ExtArgs>
       fields: Prisma.MetricSnapshotFieldRefs
@@ -747,6 +881,39 @@ export const DomainMetaScalarFieldEnum = {
 export type DomainMetaScalarFieldEnum = (typeof DomainMetaScalarFieldEnum)[keyof typeof DomainMetaScalarFieldEnum]
 
 
+export const AuditLogScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  username: 'username',
+  action: 'action',
+  target: 'target',
+  details: 'details',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  createdAt: 'createdAt'
+} as const
+
+export type AuditLogScalarFieldEnum = (typeof AuditLogScalarFieldEnum)[keyof typeof AuditLogScalarFieldEnum]
+
+
+export const LoginLogScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  username: 'username',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  browser: 'browser',
+  os: 'os',
+  device: 'device',
+  country: 'country',
+  city: 'city',
+  isp: 'isp',
+  createdAt: 'createdAt'
+} as const
+
+export type LoginLogScalarFieldEnum = (typeof LoginLogScalarFieldEnum)[keyof typeof LoginLogScalarFieldEnum]
+
+
 export const MetricSnapshotScalarFieldEnum = {
   id: 'id',
   cpu: 'cpu',
@@ -802,6 +969,33 @@ export const DomainMetaOrderByRelevanceFieldEnum = {
 } as const
 
 export type DomainMetaOrderByRelevanceFieldEnum = (typeof DomainMetaOrderByRelevanceFieldEnum)[keyof typeof DomainMetaOrderByRelevanceFieldEnum]
+
+
+export const AuditLogOrderByRelevanceFieldEnum = {
+  username: 'username',
+  action: 'action',
+  target: 'target',
+  details: 'details',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent'
+} as const
+
+export type AuditLogOrderByRelevanceFieldEnum = (typeof AuditLogOrderByRelevanceFieldEnum)[keyof typeof AuditLogOrderByRelevanceFieldEnum]
+
+
+export const LoginLogOrderByRelevanceFieldEnum = {
+  username: 'username',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  browser: 'browser',
+  os: 'os',
+  device: 'device',
+  country: 'country',
+  city: 'city',
+  isp: 'isp'
+} as const
+
+export type LoginLogOrderByRelevanceFieldEnum = (typeof LoginLogOrderByRelevanceFieldEnum)[keyof typeof LoginLogOrderByRelevanceFieldEnum]
 
 
 
@@ -949,6 +1143,8 @@ export type GlobalOmitConfig = {
   dashboardAccount?: Prisma.DashboardAccountOmit
   accountSystemUser?: Prisma.AccountSystemUserOmit
   domainMeta?: Prisma.DomainMetaOmit
+  auditLog?: Prisma.AuditLogOmit
+  loginLog?: Prisma.LoginLogOmit
   metricSnapshot?: Prisma.MetricSnapshotOmit
 }
 

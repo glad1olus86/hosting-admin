@@ -10,6 +10,7 @@ import {
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
 import { execAsRoot } from "@/lib/ssh-client";
+import { logAction } from "@/lib/audit";
 
 // Update wp-config.php DB_PASSWORD in all domains of a user where this DB is used
 async function updateWpConfigs(user: string, dbName: string, newPassword: string) {
@@ -61,6 +62,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await addDatabase(user, db_name, db_user, db_password, type || "mysql");
+    logAction(request, auth.user, "database.create", db_name);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -103,6 +105,7 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
     }
 
+    logAction(request, auth.user, `database.${action}`, db_name);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -127,6 +130,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await deleteDatabase(user, db_name);
+    logAction(request, auth.user, "database.delete", db_name);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

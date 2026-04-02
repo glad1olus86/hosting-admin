@@ -14,6 +14,7 @@ import {
   getMailAccountAutoreply,
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, canAccessUser } from "@/lib/auth-guard";
+import { logAction } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth();
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await addMailAccount(user, domain, account, password);
+    logAction(request, auth.user, "mail.account.create", `${account}@${domain}`);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -107,6 +109,7 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
     }
 
+    logAction(request, auth.user, `mail.account.${action}`, `${account}@${domain}`);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -129,6 +132,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await deleteMailAccount(user, domain, account);
+    logAction(request, auth.user, "mail.account.delete", `${account}@${domain}`);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

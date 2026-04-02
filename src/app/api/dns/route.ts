@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listAllDnsDomains, deleteDnsDomain } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
+import { logAction } from "@/lib/audit";
 
 export async function GET() {
   const auth = await requireAuth();
@@ -29,6 +30,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await deleteDnsDomain(user, domain);
+    logAction(request, auth.user, "dns.domain.delete", domain);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

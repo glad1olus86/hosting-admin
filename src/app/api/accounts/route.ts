@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { requireAdmin, isNextResponse } from "@/lib/auth-guard";
+import { logAction } from "@/lib/audit";
 
 // GET — list all dashboard accounts (admin only)
 export async function GET() {
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
       },
     });
 
+    logAction(request, auth.user, "account.create", username);
     return NextResponse.json({
       ...account,
       linkedUsers: account.systemUsers.map((su) => su.hestiaUsername),
@@ -224,6 +226,7 @@ export async function PATCH(request: Request) {
         );
     }
 
+    logAction(request, auth.user, `account.${action}`, `#${id}`);
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json(
@@ -248,6 +251,7 @@ export async function DELETE(request: Request) {
     }
 
     await prisma.dashboardAccount.delete({ where: { id } });
+    logAction(request, auth.user, "account.delete", `#${id}`);
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json(

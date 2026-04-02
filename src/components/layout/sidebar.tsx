@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   HardDrive,
   Upload,
+  ScrollText,
   Server,
   Settings,
   UserPlus,
@@ -49,6 +50,7 @@ const navGroups: NavGroup[] = [
       { label: "SSL", href: "/ssl", icon: ShieldCheck },
       { label: "Backups", href: "/backups", icon: HardDrive },
       { label: "FTP", href: "/ftp", icon: Upload },
+      { label: "Logs", href: "/logs", icon: ScrollText, adminOnly: true },
     ],
   },
   {

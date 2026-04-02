@@ -6,6 +6,7 @@ import {
   deleteBackup,
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
+import { logAction } from "@/lib/audit";
 
 export async function GET() {
   const auth = await requireAuth();
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const result = await createBackup(user);
+    logAction(request, auth.user, "backup.create", user);
     return NextResponse.json({ success: true, result });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -53,6 +55,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const result = await restoreBackup(user, backup);
+    logAction(request, auth.user, "backup.restore", backup);
     return NextResponse.json({ success: true, result });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -74,6 +77,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const result = await deleteBackup(user, backup);
+    logAction(request, auth.user, "backup.delete", backup);
     return NextResponse.json({ success: true, result });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

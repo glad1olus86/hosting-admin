@@ -5,6 +5,7 @@ import {
   deleteLetsEncryptDomain,
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
+import { logAction } from "@/lib/audit";
 
 export async function GET() {
   const auth = await requireAuth();
@@ -32,6 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await addLetsEncryptDomain(user, domain);
+    logAction(request, auth.user, "ssl.request", domain);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -53,6 +55,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await deleteLetsEncryptDomain(user, domain);
+    logAction(request, auth.user, "ssl.delete", domain);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

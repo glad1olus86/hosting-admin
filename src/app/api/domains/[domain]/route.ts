@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isNextResponse, canAccessUser } from "@/lib/auth-guard";
 import { execAsRoot } from "@/lib/ssh-client";
+import { logAction } from "@/lib/audit";
 import {
   listDomains,
   changeBackendTemplate,
@@ -152,6 +153,7 @@ export async function PATCH(
         );
     }
 
+    logAction(request, auth.user, `domain.${action}`, domain, actionParams);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json(

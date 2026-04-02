@@ -54,6 +54,8 @@ export const ModelName = {
   DashboardAccount: 'DashboardAccount',
   AccountSystemUser: 'AccountSystemUser',
   DomainMeta: 'DomainMeta',
+  AuditLog: 'AuditLog',
+  LoginLog: 'LoginLog',
   MetricSnapshot: 'MetricSnapshot'
 } as const
 
@@ -108,6 +110,39 @@ export const DomainMetaScalarFieldEnum = {
 } as const
 
 export type DomainMetaScalarFieldEnum = (typeof DomainMetaScalarFieldEnum)[keyof typeof DomainMetaScalarFieldEnum]
+
+
+export const AuditLogScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  username: 'username',
+  action: 'action',
+  target: 'target',
+  details: 'details',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  createdAt: 'createdAt'
+} as const
+
+export type AuditLogScalarFieldEnum = (typeof AuditLogScalarFieldEnum)[keyof typeof AuditLogScalarFieldEnum]
+
+
+export const LoginLogScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  username: 'username',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  browser: 'browser',
+  os: 'os',
+  device: 'device',
+  country: 'country',
+  city: 'city',
+  isp: 'isp',
+  createdAt: 'createdAt'
+} as const
+
+export type LoginLogScalarFieldEnum = (typeof LoginLogScalarFieldEnum)[keyof typeof LoginLogScalarFieldEnum]
 
 
 export const MetricSnapshotScalarFieldEnum = {
@@ -165,4 +200,31 @@ export const DomainMetaOrderByRelevanceFieldEnum = {
 } as const
 
 export type DomainMetaOrderByRelevanceFieldEnum = (typeof DomainMetaOrderByRelevanceFieldEnum)[keyof typeof DomainMetaOrderByRelevanceFieldEnum]
+
+
+export const AuditLogOrderByRelevanceFieldEnum = {
+  username: 'username',
+  action: 'action',
+  target: 'target',
+  details: 'details',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent'
+} as const
+
+export type AuditLogOrderByRelevanceFieldEnum = (typeof AuditLogOrderByRelevanceFieldEnum)[keyof typeof AuditLogOrderByRelevanceFieldEnum]
+
+
+export const LoginLogOrderByRelevanceFieldEnum = {
+  username: 'username',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  browser: 'browser',
+  os: 'os',
+  device: 'device',
+  country: 'country',
+  city: 'city',
+  isp: 'isp'
+} as const
+
+export type LoginLogOrderByRelevanceFieldEnum = (typeof LoginLogOrderByRelevanceFieldEnum)[keyof typeof LoginLogOrderByRelevanceFieldEnum]
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, isNextResponse } from "@/lib/auth-guard";
 import { hestiaCommand, hestiaActionCommand } from "@/lib/hestia-api";
+import { logAction } from "@/lib/audit";
 
 // GET — list firewall rules
 export async function GET() {
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
       comment || ""
     );
 
+    logAction(request, auth.user, "settings.firewall.add", `${protocol}:${port}`, { action, ip, comment });
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json(
@@ -94,6 +96,7 @@ export async function DELETE(request: Request) {
 
     await hestiaActionCommand("v-delete-firewall-rule", id);
 
+    logAction(request, auth.user, "settings.firewall.delete", `rule#${id}`);
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json(

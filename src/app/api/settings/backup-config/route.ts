@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, isNextResponse } from "@/lib/auth-guard";
 import { hestiaCommand } from "@/lib/hestia-api";
+import { logAction } from "@/lib/audit";
 
 // GET — read backup configuration from HestiaCP
 export async function GET() {
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
 
     await hestiaCommand("v-change-sys-config-value", key, value);
 
+    logAction(request, auth.user, "settings.backup-config", key, { value });
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json(

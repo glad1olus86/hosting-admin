@@ -9,6 +9,7 @@ import {
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
 import { execAsRoot } from "@/lib/ssh-client";
+import { logAction } from "@/lib/audit";
 
 const HIDDEN_DOMAINS = ["host.lamapixel.com", "system.lamapixel.com"];
 
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
       // Default: create web + mail + DNS (v-add-domain)
       await addDomain(user, domain, ip || undefined);
     }
+    logAction(request, auth.user, "domain.create", domain);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -107,8 +109,10 @@ export async function PATCH(request: NextRequest) {
     }
     if (action === "revoke-ssl") {
       await deleteLetsEncrypt(user, domain);
+      logAction(request, auth.user, "domain.ssl.revoke", domain);
     } else {
       await addLetsEncrypt(user, domain);
+      logAction(request, auth.user, "domain.ssl.add", domain);
     }
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -133,6 +137,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await deleteDomain(user, domain);
+    logAction(request, auth.user, "domain.delete", domain);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

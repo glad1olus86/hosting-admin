@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, createJWT, createSession } from "@/lib/auth";
+import { logLogin } from "@/lib/audit";
 
 export async function POST(request: Request) {
   try {
@@ -38,6 +39,8 @@ export async function POST(request: Request) {
     });
 
     await createSession(token);
+
+    logLogin(request, { id: user.id, username: user.username });
 
     return NextResponse.json({
       id: user.id,

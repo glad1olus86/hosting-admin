@@ -33,6 +33,16 @@ export type AccountSystemUser = Prisma.AccountSystemUserModel
  */
 export type DomainMeta = Prisma.DomainMetaModel
 /**
+ * Model AuditLog
+ * 
+ */
+export type AuditLog = Prisma.AuditLogModel
+/**
+ * Model LoginLog
+ * 
+ */
+export type LoginLog = Prisma.LoginLogModel
+/**
  * Model MetricSnapshot
  * 
  */

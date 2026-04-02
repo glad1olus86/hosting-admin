@@ -6,6 +6,7 @@ import {
   changeFtpPassword,
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
+import { logAction } from "@/lib/audit";
 
 export async function GET() {
   const auth = await requireAuth();
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await addFtpAccount(user, domain, ftp_user, password);
+    logAction(request, auth.user, "ftp.create", ftp_user);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -53,6 +55,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await changeFtpPassword(user, domain, ftp_user, password);
+    logAction(request, auth.user, "ftp.change_password", ftp_user);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -75,6 +78,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await deleteFtpAccount(user, domain, ftp_user);
+    logAction(request, auth.user, "ftp.delete", ftp_user);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

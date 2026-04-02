@@ -11,6 +11,7 @@ import {
   addLetsEncryptMail,
 } from "@/lib/hestia-api";
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
+import { logAction } from "@/lib/audit";
 
 export async function GET() {
   const auth = await requireAuth();
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await addMailDomain(user, domain);
+    logAction(request, auth.user, "mail.domain.create", domain);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -82,6 +84,7 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
     }
 
+    logAction(request, auth.user, `mail.domain.${action}`, domain);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -103,6 +106,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     await deleteMailDomain(user, domain);
+    logAction(request, auth.user, "mail.domain.delete", domain);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

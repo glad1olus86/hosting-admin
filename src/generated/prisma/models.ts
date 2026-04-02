@@ -11,5 +11,7 @@
 export type * from './models/DashboardAccount'
 export type * from './models/AccountSystemUser'
 export type * from './models/DomainMeta'
+export type * from './models/AuditLog'
+export type * from './models/LoginLog'
 export type * from './models/MetricSnapshot'
 export type * from './commonInputTypes'

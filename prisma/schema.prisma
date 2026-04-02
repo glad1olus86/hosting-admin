@@ -44,6 +44,42 @@ model DomainMeta {
   @@map("domain_meta")
 }
 
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  accountId Int      @map("account_id")
+  username  String   @db.VarChar(50)
+  action    String   @db.VarChar(100)
+  target    String?  @db.VarChar(255)
+  details   String?  @db.Text
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.VarChar(512)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([accountId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model LoginLog {
+  id        Int      @id @default(autoincrement())
+  accountId Int      @map("account_id")
+  username  String   @db.VarChar(50)
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.VarChar(512)
+  browser   String?  @db.VarChar(100)
+  os        String?  @db.VarChar(100)
+  device    String?  @db.VarChar(100)
+  country   String?  @db.VarChar(100)
+  city      String?  @db.VarChar(100)
+  isp       String?  @db.VarChar(200)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([accountId])
+  @@index([createdAt])
+  @@map("login_logs")
+}
+
 model MetricSnapshot {
   id          Int      @id @default(autoincrement())
   cpu         Float
