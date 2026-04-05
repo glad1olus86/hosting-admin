@@ -39,6 +39,7 @@ export type DomainMetaMinAggregateOutputType = {
   domain: string | null
   expirationDate: Date | null
   comment: string | null
+  noindex: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -48,6 +49,7 @@ export type DomainMetaMaxAggregateOutputType = {
   domain: string | null
   expirationDate: Date | null
   comment: string | null
+  noindex: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -57,6 +59,7 @@ export type DomainMetaCountAggregateOutputType = {
   domain: number
   expirationDate: number
   comment: number
+  noindex: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -76,6 +79,7 @@ export type DomainMetaMinAggregateInputType = {
   domain?: true
   expirationDate?: true
   comment?: true
+  noindex?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -85,6 +89,7 @@ export type DomainMetaMaxAggregateInputType = {
   domain?: true
   expirationDate?: true
   comment?: true
+  noindex?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -94,6 +99,7 @@ export type DomainMetaCountAggregateInputType = {
   domain?: true
   expirationDate?: true
   comment?: true
+  noindex?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -190,6 +196,7 @@ export type DomainMetaGroupByOutputType = {
   domain: string
   expirationDate: Date | null
   comment: string | null
+  noindex: boolean
   createdAt: Date
   updatedAt: Date
   _count: DomainMetaCountAggregateOutputType | null
@@ -222,6 +229,7 @@ export type DomainMetaWhereInput = {
   domain?: Prisma.StringFilter<"DomainMeta"> | string
   expirationDate?: Prisma.DateTimeNullableFilter<"DomainMeta"> | Date | string | null
   comment?: Prisma.StringNullableFilter<"DomainMeta"> | string | null
+  noindex?: Prisma.BoolFilter<"DomainMeta"> | boolean
   createdAt?: Prisma.DateTimeFilter<"DomainMeta"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"DomainMeta"> | Date | string
 }
@@ -231,6 +239,7 @@ export type DomainMetaOrderByWithRelationInput = {
   domain?: Prisma.SortOrder
   expirationDate?: Prisma.SortOrderInput | Prisma.SortOrder
   comment?: Prisma.SortOrderInput | Prisma.SortOrder
+  noindex?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _relevance?: Prisma.DomainMetaOrderByRelevanceInput
@@ -244,6 +253,7 @@ export type DomainMetaWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.DomainMetaWhereInput | Prisma.DomainMetaWhereInput[]
   expirationDate?: Prisma.DateTimeNullableFilter<"DomainMeta"> | Date | string | null
   comment?: Prisma.StringNullableFilter<"DomainMeta"> | string | null
+  noindex?: Prisma.BoolFilter<"DomainMeta"> | boolean
   createdAt?: Prisma.DateTimeFilter<"DomainMeta"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"DomainMeta"> | Date | string
 }, "id" | "domain">
@@ -253,6 +263,7 @@ export type DomainMetaOrderByWithAggregationInput = {
   domain?: Prisma.SortOrder
   expirationDate?: Prisma.SortOrderInput | Prisma.SortOrder
   comment?: Prisma.SortOrderInput | Prisma.SortOrder
+  noindex?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.DomainMetaCountOrderByAggregateInput
@@ -270,6 +281,7 @@ export type DomainMetaScalarWhereWithAggregatesInput = {
   domain?: Prisma.StringWithAggregatesFilter<"DomainMeta"> | string
   expirationDate?: Prisma.DateTimeNullableWithAggregatesFilter<"DomainMeta"> | Date | string | null
   comment?: Prisma.StringNullableWithAggregatesFilter<"DomainMeta"> | string | null
+  noindex?: Prisma.BoolWithAggregatesFilter<"DomainMeta"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"DomainMeta"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"DomainMeta"> | Date | string
 }
@@ -278,6 +290,7 @@ export type DomainMetaCreateInput = {
   domain: string
   expirationDate?: Date | string | null
   comment?: string | null
+  noindex?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -287,6 +300,7 @@ export type DomainMetaUncheckedCreateInput = {
   domain: string
   expirationDate?: Date | string | null
   comment?: string | null
+  noindex?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -295,6 +309,7 @@ export type DomainMetaUpdateInput = {
   domain?: Prisma.StringFieldUpdateOperationsInput | string
   expirationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noindex?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -304,6 +319,7 @@ export type DomainMetaUncheckedUpdateInput = {
   domain?: Prisma.StringFieldUpdateOperationsInput | string
   expirationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noindex?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -313,6 +329,7 @@ export type DomainMetaCreateManyInput = {
   domain: string
   expirationDate?: Date | string | null
   comment?: string | null
+  noindex?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -321,6 +338,7 @@ export type DomainMetaUpdateManyMutationInput = {
   domain?: Prisma.StringFieldUpdateOperationsInput | string
   expirationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noindex?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -330,6 +348,7 @@ export type DomainMetaUncheckedUpdateManyInput = {
   domain?: Prisma.StringFieldUpdateOperationsInput | string
   expirationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noindex?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -345,6 +364,7 @@ export type DomainMetaCountOrderByAggregateInput = {
   domain?: Prisma.SortOrder
   expirationDate?: Prisma.SortOrder
   comment?: Prisma.SortOrder
+  noindex?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -358,6 +378,7 @@ export type DomainMetaMaxOrderByAggregateInput = {
   domain?: Prisma.SortOrder
   expirationDate?: Prisma.SortOrder
   comment?: Prisma.SortOrder
+  noindex?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -367,6 +388,7 @@ export type DomainMetaMinOrderByAggregateInput = {
   domain?: Prisma.SortOrder
   expirationDate?: Prisma.SortOrder
   comment?: Prisma.SortOrder
+  noindex?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -386,6 +408,7 @@ export type DomainMetaSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   domain?: boolean
   expirationDate?: boolean
   comment?: boolean
+  noindex?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["domainMeta"]>
@@ -397,11 +420,12 @@ export type DomainMetaSelectScalar = {
   domain?: boolean
   expirationDate?: boolean
   comment?: boolean
+  noindex?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type DomainMetaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "domain" | "expirationDate" | "comment" | "createdAt" | "updatedAt", ExtArgs["result"]["domainMeta"]>
+export type DomainMetaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "domain" | "expirationDate" | "comment" | "noindex" | "createdAt" | "updatedAt", ExtArgs["result"]["domainMeta"]>
 
 export type $DomainMetaPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "DomainMeta"
@@ -411,6 +435,7 @@ export type $DomainMetaPayload<ExtArgs extends runtime.Types.Extensions.Internal
     domain: string
     expirationDate: Date | null
     comment: string | null
+    noindex: boolean
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["domainMeta"]>
@@ -786,6 +811,7 @@ export interface DomainMetaFieldRefs {
   readonly domain: Prisma.FieldRef<"DomainMeta", 'String'>
   readonly expirationDate: Prisma.FieldRef<"DomainMeta", 'DateTime'>
   readonly comment: Prisma.FieldRef<"DomainMeta", 'String'>
+  readonly noindex: Prisma.FieldRef<"DomainMeta", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"DomainMeta", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"DomainMeta", 'DateTime'>
 }

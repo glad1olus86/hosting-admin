@@ -874,6 +874,7 @@ export const DomainMetaScalarFieldEnum = {
   domain: 'domain',
   expirationDate: 'expirationDate',
   comment: 'comment',
+  noindex: 'noindex',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

@@ -124,7 +124,7 @@ function DomainRows({
   onNavigate: (d: HestiaDomain) => void;
   onDelete: (d: HestiaDomain) => void; onWpInstall: (d: HestiaDomain) => void;
   sslLoading: Set<string>; phpVersion: (b: string) => string; formatDisk: (mb: string) => string;
-  domainMeta: Record<string, { expirationDate: string | null; comment: string | null }>;
+  domainMeta: Record<string, { expirationDate: string | null; comment: string | null; noindex: boolean }>;
   onEditExpiration: (domain: string, current: string | null) => void;
   onEditComment: (domain: string, current: string | null) => void;
   isAdmin: boolean;
@@ -193,11 +193,16 @@ function DomainRows({
           {formatDisk(domain.U_DISK)}
         </TableCell>
         <TableCell>
-          {isSuspended ? (
-            <Badge className="bg-red-100 text-red-700 border-red-200">Suspended</Badge>
-          ) : (
-            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Active</Badge>
-          )}
+          <div className="flex items-center gap-1">
+            {isSuspended ? (
+              <Badge className="bg-red-100 text-red-700 border-red-200">Suspended</Badge>
+            ) : (
+              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Active</Badge>
+            )}
+            {meta?.noindex && (
+              <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px]">noindex</Badge>
+            )}
+          </div>
         </TableCell>
         {/* Expiration Date */}
         <TableCell onClick={(e) => e.stopPropagation()}>
@@ -309,7 +314,7 @@ export default function DomainsPage() {
   const [sslLoading, setSslLoading] = useState<Set<string>>(new Set());
 
   // Domain meta (expiration + comment)
-  const [domainMeta, setDomainMeta] = useState<Record<string, { expirationDate: string | null; comment: string | null }>>({});
+  const [domainMeta, setDomainMeta] = useState<Record<string, { expirationDate: string | null; comment: string | null; noindex: boolean }>>({});
 
   // Expiration edit dialog
   const [expDialogOpen, setExpDialogOpen] = useState(false);

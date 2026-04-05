@@ -10,11 +10,12 @@ export async function GET() {
   try {
     const metas = await prisma.domainMeta.findMany();
     // Return as a map: { "example.com": { expirationDate, comment } }
-    const map: Record<string, { expirationDate: string | null; comment: string | null }> = {};
+    const map: Record<string, { expirationDate: string | null; comment: string | null; noindex: boolean }> = {};
     for (const m of metas) {
       map[m.domain] = {
         expirationDate: m.expirationDate ? m.expirationDate.toISOString().split("T")[0] : null,
         comment: m.comment,
+        noindex: m.noindex,
       };
     }
     return NextResponse.json(map);

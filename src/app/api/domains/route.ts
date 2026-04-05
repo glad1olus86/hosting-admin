@@ -10,6 +10,8 @@ import {
 import { requireAuth, isNextResponse, filterByUser, canAccessUser } from "@/lib/auth-guard";
 import { execAsRoot } from "@/lib/ssh-client";
 import { logAction } from "@/lib/audit";
+import { applyNoindex } from "@/lib/noindex";
+import { prisma } from "@/lib/prisma";
 
 const HIDDEN_DOMAINS = ["host.lamapixel.com", "system.lamapixel.com"];
 
@@ -85,6 +87,21 @@ export async function POST(request: NextRequest) {
       await addDomain(user, domain, ip || undefined);
     }
     logAction(request, auth.user, "domain.create", domain);
+
+    // Auto-enable noindex for demo.* domains
+    if (domain.startsWith("demo.")) {
+      try {
+        await applyNoindex(user, domain);
+        await prisma.domainMeta.upsert({
+          where: { domain },
+          create: { domain, noindex: true },
+          update: { noindex: true },
+        });
+      } catch {
+        // Non-critical
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

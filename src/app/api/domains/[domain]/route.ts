@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isNextResponse, canAccessUser } from "@/lib/auth-guard";
 import { execAsRoot } from "@/lib/ssh-client";
 import { logAction } from "@/lib/audit";
+import { applyNoindex, removeNoindex } from "@/lib/noindex";
+import { prisma } from "@/lib/prisma";
 import {
   listDomains,
   changeBackendTemplate,
@@ -146,6 +148,20 @@ export async function PATCH(
       case "request-ssl":
         await addLetsEncrypt(user, domain);
         break;
+      case "set-noindex": {
+        const enable = actionParams.value === true || actionParams.value === "true";
+        if (enable) {
+          await applyNoindex(user, domain);
+        } else {
+          await removeNoindex(user, domain);
+        }
+        await prisma.domainMeta.upsert({
+          where: { domain },
+          create: { domain, noindex: enable },
+          update: { noindex: enable },
+        });
+        break;
+      }
       default:
         return NextResponse.json(
           { error: `Unknown action: ${action}` },

@@ -238,6 +238,7 @@ export default function DomainPage() {
   const [httpAuthUsers, setHttpAuthUsers] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteDomainLoading, setDeleteDomainLoading] = useState(false);
+  const [noindex, setNoindex] = useState(false);
 
   // ── Base path for files ──
   const basePath = user ? `/home/${user}/web/${domain}/public_html` : "";
@@ -254,6 +255,14 @@ export default function DomainPage() {
       if (!res.ok || data.error) throw new Error(data.error || "Failed to fetch domain info");
       setDomainInfo(data);
       if (data.httpAuthUsers) setHttpAuthUsers(data.httpAuthUsers);
+      // Fetch noindex status
+      try {
+        const metaRes = await fetch("/api/domain-meta");
+        if (metaRes.ok) {
+          const metaData = await metaRes.json();
+          if (metaData[domain]?.noindex !== undefined) setNoindex(metaData[domain].noindex);
+        }
+      } catch {}
     } catch (err: any) {
       setDomainError(err.message);
     } finally {
@@ -1520,6 +1529,53 @@ export default function DomainPage() {
                 {actionLoading === "add-httpauth" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add Auth User
               </Button>
             </div>
+          </GlassCard>
+
+          {/* Search Engine Indexing */}
+          <GlassCard className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-[#134E4A] flex items-center gap-2">
+                  <EyeOff className="h-4 w-4" />
+                  Block Search Engines (noindex)
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Adds robots.txt and X-Robots-Tag header to prevent search engine indexing.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant={noindex ? "destructive" : "outline"}
+                className={cn(
+                  "cursor-pointer min-w-[120px]",
+                  !noindex && "border-teal-200 text-teal-700 hover:bg-teal-50"
+                )}
+                disabled={actionLoading === "set-noindex"}
+                onClick={async () => {
+                  const newVal = !noindex;
+                  const ok = await domainAction("set-noindex", { value: String(newVal) });
+                  if (ok) {
+                    setNoindex(newVal);
+                    toast.success(newVal ? "Noindex enabled — search engines blocked" : "Noindex disabled — search engines allowed");
+                  }
+                }}
+              >
+                {actionLoading === "set-noindex" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : noindex ? (
+                  <><EyeOff className="h-4 w-4 mr-1" /> Noindex ON</>
+                ) : (
+                  <><Eye className="h-4 w-4 mr-1" /> Noindex OFF</>
+                )}
+              </Button>
+            </div>
+            {noindex && (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                <p className="text-xs text-amber-700">
+                  This domain is hidden from search engines via robots.txt and X-Robots-Tag header.
+                </p>
+              </div>
+            )}
           </GlassCard>
 
           {/* Danger Zone */}

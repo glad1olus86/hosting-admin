@@ -38,6 +38,7 @@ model DomainMeta {
   domain         String    @unique @db.VarChar(255)
   expirationDate DateTime? @map("expiration_date") @db.Date
   comment        String?   @db.Text
+  noindex        Boolean   @default(false)
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
