@@ -5,6 +5,7 @@ import { logAction } from "@/lib/audit";
 import { applyNoindex, removeNoindex } from "@/lib/noindex";
 import { prisma } from "@/lib/prisma";
 import {
+  hestiaCommand,
   listDomains,
   changeBackendTemplate,
   changeWebTemplate,
@@ -47,8 +48,11 @@ export async function GET(
   }
 
   try {
-    const domains = await listDomains(user);
-    const domainData = domains.find((d: any) => d.domain === domain);
+    // Use v-list-web-domain (singular) to get full domain data including REDIRECT fields
+    const raw = await hestiaCommand("v-list-web-domain", user, domain, "json");
+    const domainData = raw?.[domain]
+      ? { domain, user, ...raw[domain] }
+      : null;
 
     if (!domainData) {
       return NextResponse.json({ error: "Domain not found" }, { status: 404 });
